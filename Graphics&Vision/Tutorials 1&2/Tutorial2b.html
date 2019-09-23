@@ -1,0 +1,77 @@
+<!Doctype HTML>
+<html>
+    <Head>
+        <meta charset="UTF-8">
+        <title>Title of the document</title>
+    </Head>
+
+
+    <body>
+        <p id="demo">Click the button to add a new element to the array.</p>
+        <button onclick="pushKiwi()">Push Kiwi!</button>
+        <button onclick="unshiftPineapple()">Unshift Pineapple!</button>
+        <button onclick="popLastFruit()">Pop the end fruit on the array</button>
+        <button onclick="shiftFirstFruit()">Shift the first fruit on the array</button>
+        <button onclick="sliceFruits()">Take some of the fruits</button>
+        <button onclick="spliceFruits()">swap some of the fruit</button>
+        <button onclick="sortFruits()">sort the fruit</button>
+
+    </body>
+
+    <script type='text/javascript'>
+        var fruits = ['Banana', 'Orange', 'Lemon', 'Apple', 'Mango'];
+        console.log('Fruit array: ' + fruits);
+        var x = document.getElementById('demo');
+        x.innerHTML = fruits;
+
+        function pushKiwi() {
+            fruits.push('Kiwi');
+            var x = document.getElementById('demo');
+            x.innerHTML = fruits;
+            console.log('New Fruit array: ' + fruits);
+        }
+
+        function unshiftPineapple() {
+            fruits.unshift('Pineapple');
+            var x = document.getElementById('demo');
+            x.innerHTML = fruits;
+            console.log('New Fruit array: ' + fruits);
+        }
+
+        function popLastFruit() {
+            fruits.pop();
+            var x = document.getElementById('demo');
+            x.innerHTML = fruits;
+            console.log('New Fruit array: ' + fruits);
+        }
+
+        function shiftFirstFruit() {
+            fruits.shift();
+            var x = document.getElementById('demo');
+            x.innerHTML = fruits;
+            console.log('New Fruit array: ' + fruits);
+        }
+
+        function sliceFruits() {
+            fruits = fruits.slice(1,3);
+            var x = document.getElementById('demo');
+            x.innerHTML = fruits;
+            console.log('Some of the fruits: ' + fruits);
+        }
+        
+        function spliceFruits() {
+            fruits.splice(2,1, 'Rasin');
+            var x = document.getElementById('demo');
+            x.innerHTML = fruits;
+            console.log('New Fruit array: ' + fruits);
+        }
+
+        function sortFruits() {
+            fruits.sort();
+            var x = document.getElementById('demo');
+            x.innerHTML = fruits;
+            console.log('sorted of the fruits: ' + fruits);
+        }
+
+    </script>
+</html>

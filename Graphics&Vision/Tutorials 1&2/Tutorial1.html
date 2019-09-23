@@ -1,0 +1,71 @@
+<!Doctype HTML>
+<html>
+    <Head>
+        <meta charset="UTF-8">
+        <title>Title of the document</title>
+    </Head>
+
+    <body>
+        <h1>My first heading</h1>
+        <p>My first paragraph.</p>
+    </body>
+
+    <!-- Use for basic shapes js -->
+    <canvas id="myCanvas" width="200" height="100" style="border:1px solid #FF0000;">
+    </canvas>
+
+    <canvas id="myCanvas2" width="240" height="297" style="border:1px solid #000000;">
+        </canvas>
+
+    <script type="text/javascript">
+        var c=document.getElementById('myCanvas');
+        var ctx=c.getContext('2d');
+        
+        //Draw rectangle
+        ctx.fillStyle='#FF0000';
+        ctx.fillRect(0,0,150,75);
+
+        //Draw line
+        //ctx.moveTo(0,0);
+        //ctx.lineTo(200,100);
+        //ctx.stroke();
+
+        //Draw Circle
+        // ctx.beginPath();
+        // ctx.arc(95,50,40,0,2*Math.PI);
+        // ctx.stroke();
+
+        //Draw text
+        // ctx.font='30px Arial';
+        // ctx.fillText('Hello World!', 10, 35);
+        // ctx.rotate(20*Math.PI/180)
+        // ctx.stroketext('Hello World!', 10, 35);
+
+        //Linear gradient
+        // var linegrad = ctx.createLinearGradient(0, 0, 200, 0);
+        // linegrad.addColorStop(0, 'red');
+        // linegrad.addColorStop(1, 'white');
+        // ctx.fillStyle=linegrad;
+        // ctx.fillRect(10,10,150,80);
+
+        //Radial gradient (Fix)
+        // var radgrad = ctx.createRadialGradient(75, 50 , 5, 90, 60, 100);
+        // radgrad.addColorStop(0, 'blue');
+        // linegrad.addColorStop(1, 'white');
+        // ctx.fillStyle=radgrad;
+        // ctx.fillArc(10,10,150,80);
+
+        var c2=document.getElementById('myCanvas2');
+        var ctx2=c2.getContext('2d');
+        //Images
+        var image = new Image();
+        image.onload = function()
+        {
+            ctx2.drawImage(image, 0,0)
+        }
+        image.src = 'scream.png';
+
+    </script>
+
+
+</html>

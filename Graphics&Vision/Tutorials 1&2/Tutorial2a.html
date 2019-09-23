@@ -1,0 +1,53 @@
+<!Doctype HTML>
+<html>
+    <Head>
+        <meta charset="UTF-8">
+        <title>Title of the document</title>
+    </Head>
+
+    <body>
+        <h1>My first heading</h1>
+        <p>My first paragraph.</p>
+    </body>
+
+    <script type="text/javascript">
+        var fruits = ['Banana', 'Orange', 'Lemon', 'Apple', 'Mango'];
+        document.write('<h5> Some Fruits</h5> <br>');
+        document.write(fruits + '<br>');
+        console.log(fruits);
+
+        var lastname='Doe',
+        age = 30,
+        job = 'Carpenter'
+
+        var checkIfLastnameIsTrueInaSingleLine = (lastname === 'Doe') ? true : False;
+        document.write('Is it true that ' + lastname + "'s lastname is Doe? " + checkIfLastnameIsTrueInaSingleLine);
+
+        var cars = ['Saab', 'Volvo', 'BMW'];
+        document.write('<h5>Some Cars</h5> <br>');
+        for (var i = 0, len = cars.length; i<len; i++)
+        {
+            document.write(cars[i] + '<br>');
+        }
+
+        var person = {
+            fname:'John',
+            lname:'Doe',
+            age:'25'
+        };
+
+        var txt = '';
+
+        for (var x in person)
+        {
+            txt = txt + person[x];
+        }
+
+        document.write(txt);
+
+        
+
+    </script>
+
+
+</html>
