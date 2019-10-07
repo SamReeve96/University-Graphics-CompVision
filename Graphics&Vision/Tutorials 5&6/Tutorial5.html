@@ -1,0 +1,352 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+    <title>A Simple WebGL Application</title>
+    <meta charset="utf-8">
+
+    <!--External JavaScript file-->
+    <script src="../WebGLlib/webgl-debug.js"></script>
+
+    <!--Vertex shader java script-->
+    <script id="shader-vs" type="x-shader/x-vertex">
+        attribute vec3 aVertexPosition;
+        attribute vec4 aVertexColor;
+        varying vec4 vColor;
+
+        void main() {
+            vColor = aVertexColor;
+            gl_Position = vec4(aVertexPosition, 1.0);
+        }
+    </script>
+
+    <!--Fragment shader script-->
+    <script id="shader-fs" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec4 vColor;
+
+        void main() {
+            gl_FragColor = vColor;
+        }
+    </script>
+
+    <!--Script for WebGL program-->
+    <script type="text/javascript">
+
+        //Define global variables here
+        var gl;
+        var canvas;
+        var shaderProgram;
+        var triangleVertexBuffer;
+        var triangleVertexColorBuffer;
+
+        //hexagon and strip Buffers
+        var hexagonVertexBuffer;
+        var stripVertexBuffer;
+        var stripElementBuffer;
+
+        //Create WebGL context. Recall that we have use getContext("2D")
+        //to create a 2D context for drawing 2D graphics
+        function createGLContext(canvas) {
+            var names = ["webgl", "experimental-webgl"];
+            var context = null;
+            for (var i = 0; i < names.length; i++) {
+                try {
+                    context = canvas.getContext(names[i]);
+                } catch (e) { }
+                if (context) {
+                    break;
+                }
+            }
+
+            if (context) {
+                context.viewportWidth = canvas.width;
+                context.viewportHeight = canvas.height;
+            } else {
+                alert("Failed to create WebGL context!");
+            }
+            return context;
+        }
+
+        //Load shaders from DOM (document object model). This function will be //called in setupShaders(). 
+        //The parameters for argument id will be //"shader-vs" and "shader-fs"
+        function loadShaderFromDOM(id) {
+            var shaderScript = document.getElementById(id);
+
+            // If there is no shader scripts, the function exits
+            if (!shaderScript) {
+                return null;
+            }
+
+            // Otherwise loop through the children for the found DOM element and 
+            // build up the shader source code as a string 
+            var shaderSource = "";
+            var currentChild = shaderScript.firstChild;
+            while (currentChild) {
+                if (currentChild.nodeType == 3) { // 3 corresponds to TEXT_NODE 
+                    shaderSource += currentChild.textContent;
+                }
+                currentChild = currentChild.nextSibling;
+            }
+
+            //Create a WebGL shader object according to type of shader, i.e., //vertex or fragment shader.
+            var shader;
+            if (shaderScript.type == "x-shader/x-fragment") {
+                //call WebGL function createShader() to create fragment 
+                //shader object
+                shader = gl.createShader(gl.FRAGMENT_SHADER);
+            } else if (shaderScript.type == "x-shader/x-vertex") {
+                //call WebGL function createShader() to create vertx shader obj.
+                shader = gl.createShader(gl.VERTEX_SHADER);
+            } else {
+                return null;
+            }
+
+            //load the shader source code (shaderSource) to the shader object.
+            gl.shaderSource(shader, shaderSource);
+            gl.compileShader(shader); //compile the shader
+
+            //check compiling status.
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                alert(gl.getShaderInfoLog(shader));
+                return null;
+            }
+
+            return shader;
+        }
+
+        function setupShaders() {
+            //Create vertex and fragment shaders
+            vertexShader = loadShaderFromDOM("shader-vs");
+            fragmentShader = loadShaderFromDOM("shader-fs");
+
+            //Create a webGL program object
+            shaderProgram = gl.createProgram();
+
+            //Load the shaders to the program object
+            gl.attachShader(shaderProgram, vertexShader);
+            gl.attachShader(shaderProgram, fragmentShader);
+
+            //link shaders and check status
+            gl.linkProgram(shaderProgram);
+            if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                alert("Failed to setup shaders");
+            }
+
+            //Activate the program
+            gl.useProgram(shaderProgram);
+            
+            //Add to the shader program object. 
+            //The property is the attribute in the vertex shader which has been loaded to the program object.
+            // getAttribLocation() finds the pointer to the attribute.
+            shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+            shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+            gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+            //We want per-vertex color, so...
+            gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute);
+        }
+
+        //Buffers are places for data. All data, e.g., vertex coordinates, //texture coordinates, indices, colours must be stored in their 
+        //buffers. Here, the buffer is for the vertex coordinates of a triangle
+        function setupBuffers() {
+            //A buffer object is first created by calling gl.createBuffer() 
+            triangleVertexBuffer = gl.createBuffer();
+            //Then bind the buffer to gl.ARRAY_BUFFER, which is the WebGL built-in //buffer where the vertex shader will fetch data from
+            gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBuffer);
+
+            //Actual coordinates and colors for the vertices
+            //                      XYZ                 RGBA
+            var triangleVertices = [0.3, 0.4, 0.0,      0, 0, 255, 255, //V0
+                                    0.7, 0.4, 0.0,     0, 255, 0, 255, //V1
+                                    0.5, 0.8, 0.0,    255, 0, 0, 255  //V2
+                                    ];
+
+            var nbrOfVertices = 3;
+
+            //Calc the bytes needed of one vetex element (X,Y,Z  + R,G,B,A)
+            var vertexSizeInBytes = (3 * Float32Array.BYTES_PER_ELEMENT) + (4 * Uint8Array.BYTES_PER_ELEMENT);
+
+            var vertexSizeInFloats = vertexSizeInBytes/Float32Array.BYTES_PER_ELEMENT;
+
+            //allocate the new buffer
+            var buffer = new ArrayBuffer(nbrOfVertices * vertexSizeInBytes);
+
+            //map the same buffer to the Uintarray to access the positions
+            var positionView = new Float32Array(buffer);
+
+            //map the same buffer to the Uintarray to access the color
+            var colorView = new Uint8Array(buffer);
+
+            //Populate the array buffer form the JS array
+            var positionOffsetInFloats = 0;
+            var colorOffsetInBytes = 12;
+
+            var k = 0; //index to the JS array
+            for (i = 0; i < nbrOfVertices; i++){
+                positionView[positionOffsetInFloats] = triangleVertices[k]; //X
+                positionView[1+positionOffsetInFloats] = triangleVertices[k+1]; //Y
+                positionView[2+positionOffsetInFloats] = triangleVertices[k+2]; //Z
+
+                colorView[colorOffsetInBytes] = triangleVertices[k+3] //R
+                colorView[1+colorOffsetInBytes] = triangleVertices[k+4] //G
+                colorView[2+colorOffsetInBytes] = triangleVertices[k+5] //B
+                colorView[3+colorOffsetInBytes] = triangleVertices[k+6] //A
+
+                positionOffsetInFloats += vertexSizeInFloats;
+                colorOffsetInBytes += vertexSizeInBytes;
+
+                k += 7;
+            }
+
+            gl.bufferData(gl.ARRAY_BUFFER, buffer, gl.STATIC_DRAW);
+            triangleVertexBuffer.positionSize = 3;
+            triangleVertexBuffer.colorSize = 4;
+            triangleVertexBuffer.numberOfItems = 3;
+
+            //Ex5 new items
+            //hexagon vertices
+            hexagonVertexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, hexagonVertexBuffer);
+            var hexagonVertices = [-0.3, 0.6, 0.0,  //v0
+                                    -0.4, 0.8, 0.0, //v1
+                                    -0.6, 0.8, 0.0,  //v2
+                                    -0.7, 0.6, 0.0,  //v3
+                                    -0.6, 0.4, 0.0,  //v4
+                                    -0.4, 0.4, 0.0,  //v5
+                                    -0.3, 0.6, 0.0,  //v6
+                                    ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(hexagonVertices), gl.STATIC_DRAW);
+            hexagonVertexBuffer.itemSize = 3;
+            hexagonVertexBuffer.numberOfItems = 7;
+
+            //Triangle Strip vertices
+            stripVertexBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, stripVertexBuffer);
+            var stripVertices = [-0.5, 0.2, 0.0,    //v0
+                                -0.4, 0.0, 0.0,     //v1
+                                -0.3, 0.2, 0.0,     //v2
+                                -0.2, 0.0, 0.0,     //v3
+                                -0.1, 0.2, 0.0,     //v4
+                                -0.0, 0.0, 0.0,     //v5
+                                0.1, 0.2, 0.0,      //v6
+                                0.2, 0.0, 0.0,      //v7
+                                0.3, 0.2, 0.0,      //v8
+                                0.4, 0.0, 0.0,      //v9
+                                0.5, 0.2, 0.0,      //v10
+
+                                //Second Strip
+                                -0.5, -0.3, 0.0,      //v11
+                                -0.4, -0.5, 0.0,     //v12
+                                -0.3, -0.3, 0.0,     //v13
+                                -0.2, -0.5, 0.0,     //v14
+                                -0.1, -0.3, 0.0,     //v15
+                                -0.0, -0.5, 0.0,     //v16
+                                0.1, -0.3, 0.0,      //v17
+                                0.2, -0.5, 0.0,      //v18
+                                0.3, -0.3, 0.0,      //v19
+                                0.4, -0.5, 0.0,      //v20
+                                0.5, -0.3, 0.0,      //v21
+                                ];
+
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(stripVertices), gl.STATIC_DRAW);
+            stripVertexBuffer.itemSize = 3;
+            stripVertexBuffer.numberOfItems = 22;
+            
+            //strip vertex indices
+            stripElementBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, stripElementBuffer);
+
+            var indices = [ //First strip
+                            0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ,10,
+                            
+                            //Degen tri
+                            10, 10, 11,
+
+                            //Second strip
+                            11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21     
+                        ];
+
+            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+            stripElementBuffer.numberOfItems = 25;
+        }
+
+        function draw() {
+            //Setup a viewport that is the same as the canvas
+            gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+                   
+            //reset the viewport color
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            //Make vertex buffer the current buffer
+            gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexBuffer);
+
+            //describe positions in the array
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangleVertexBuffer.positionSize, gl.FLOAT, false, 16, 0);
+
+            //describe colors in the array
+            gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, triangleVertexBuffer.colorSize, gl.UNSIGNED_BYTE, true, 16, 12);
+
+            //draw the triangle
+            gl.drawArrays(gl.TRIANGLES, 0, triangleVertexBuffer.numberOfItems);
+
+
+            //
+            //Draw ex5 items
+            //
+            
+            //Hexagon
+            //disable the colour attribute array
+            gl.disableVertexAttribArray(shaderProgram.vertexColorAttribute);
+
+            gl.vertexAttrib4f(shaderProgram.vertexColorAttribute, 1.0, 0.0, 0.0, 1.0);
+
+            //make the vertex buffer for the hex
+            gl.bindBuffer(gl.ARRAY_BUFFER, hexagonVertexBuffer);
+            //link to the aVertexPos
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, hexagonVertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            //Draw line strip
+            gl.drawArrays(gl.LINE_STRIP, 0, hexagonVertexBuffer.numberOfItems);
+
+            //draw triangle strip
+            //use const colour again
+            gl.bindBuffer(gl.ARRAY_BUFFER, stripVertexBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, stripVertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            gl.vertexAttrib4f(shaderProgram.vertexColorAttribute, 1.0, 1.0, 0.0, 1.0);
+
+            //bind the index buffer of the strip to the current buffer
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, stripElementBuffer);
+            gl.drawElements(gl.TRIANGLE_STRIP, stripElementBuffer.numberOfItems, gl.UNSIGNED_SHORT, 0);
+
+            //Draw help lines to distinguish the triangles on the strip
+            gl.vertexAttrib4f(shaderProgram.vertexColorAttribute, 0.0, 0.0, 0.0, 1.0);
+            gl.drawArrays(gl.LINE_STRIP, 0, 11);
+            gl.drawArrays(gl.LINE_STRIP, 11, 11)      
+        }  
+
+        //This function is the entry point of this webgl application
+        //It is the first functioned to be called when html doc is loaded into
+        //the browser. See html code at the end
+        function startup() {
+            //retrieve html canvas
+            canvas = document.getElementById("myGLCanvas");
+
+            //create webGL context, here debuging context is created by calling a function in the library "Webgl-debug.js"
+            gl = WebGLDebugUtils.makeDebugContext(createGLContext(canvas));
+            setupShaders();
+            setupBuffers();
+
+            //Set colour to draw with
+            gl.clearColor(1.0, 1.0, 1.0, 1.0);
+
+            draw();
+        }
+    </script>
+</head>
+<body onload="startup();">
+    <canvas id="myGLCanvas" width="500" height="500"></canvas>
+</body>
+</html>
