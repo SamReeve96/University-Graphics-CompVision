@@ -491,7 +491,7 @@
             }
 
             //console.log("1 xRot = " + xRot + "yRot = " + yRot + "t = " + trans1);
-            mat4.translate(pwgl.modelViewMatrix, [0,0, transY, transZ, pwgl.modelViewMatrix]);
+            mat4.translate(pwgl.modelViewMatrix, [0.0, transY, transZ, pwgl.modelViewMatrix]);
 
             mat4.rotateX(pwgl.modelViewMatrix, xRot/50, pwgl.modelViewMatrix);
             mat4.rotateY(pwgl.modelViewMatrix, yRot/50, pwgl.modelViewMatrix);
@@ -616,7 +616,7 @@
             canvas.addEventListener('mousedown', myMouseDown, false);
             canvas.addEventListener('mouseup', myMouseUp, false);
             canvas.addEventListener('mousewheel', wheelHandler, false);
-            canvas.addEventListener('DOM', wheelHandler, false);
+            canvas.addEventListener('DOMmouseScroll', wheelHandler, false);
 
             gl = createGLContext(canvas);
             init();
