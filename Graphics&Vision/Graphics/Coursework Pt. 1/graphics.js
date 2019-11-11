@@ -1,0 +1,560 @@
+var gl;
+var canvas;
+var shaderProgram;
+
+var pwgl = {};
+
+//Vars for translations and rotations
+var transY = transZ = 0;
+var xRot = yRot = xOffs = yOffs = drag = 0;
+pwgl.listOfPressedKeys = [];
+
+function createGLContext(canvas) {
+    var names = ["webgl", "experimental-webgl"];
+    var context = null;
+    for (var i = 0; i < names.length; i++) {
+        try {
+            context = canvas.getContext(names[i]);
+        } catch (e) { }
+        if (context) {
+            break;
+        }
+    }
+
+    if (context) {
+        context.viewportWidth = canvas.width;
+        context.viewportHeight = canvas.height;
+    } else {
+        alert("Failed to create WebGL context!");
+    }
+    return context;
+}
+
+function loadShaderFromDOM(id) {
+    var shaderScript = document.getElementById(id);
+    if (!shaderScript) {
+        return null;
+    }
+    var shaderSource = "";
+    var currentChild = shaderScript.firstChild;
+    while (currentChild) {
+        if (currentChild.nodeType == 3) { // 3 corresponds to TEXT_NODE
+            shaderSource += currentChild.textContent;
+        }
+        currentChild = currentChild.nextSibling;
+    }
+
+    var shader;
+
+    if (shaderScript.type == "x-shader/x-fragment") {
+        shader = gl.createShader(gl.FRAGMENT_SHADER);
+    } else if (shaderScript.type == "x-shader/x-vertex") {
+        shader = gl.createShader(gl.VERTEX_SHADER);
+    } else {
+        return null;
+    }
+
+    gl.shaderSource(shader, shaderSource);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        alert(gl.getShaderInfoLog(shader));
+        return null;
+    }
+    return shader;
+}
+
+function setupShaders() {
+    var vertexShader = loadShaderFromDOM("shader-vs");
+    var fragmentShader = loadShaderFromDOM("shader-fs");
+
+    shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        alert("Failed to setup shaders");
+    }
+
+    gl.useProgram(shaderProgram);
+
+    pwgl.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    pwgl.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+
+    pwgl.uniformMVMatrix = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    pwgl.uniformProjMatrix = gl.getUniformLocation(shaderProgram, "uPMatrix");
+
+    //Initalise the matricies
+    pwgl.modelViewMatrix = mat4.create();
+    pwgl.projectionMatrix = mat4.create();
+    pwgl.modelViewMatrixStack = [];
+
+    gl.enableVertexAttribArray(pwgl.vertexPositionAttribute);
+}
+
+function pushModelViewMatrix() {
+    var copyToPush = mat4.create(pwgl.modelViewMatrix);
+    pwgl.modelViewMatrixStack.push(copyToPush);
+}
+
+function popModelViewMatrix() {
+    if (pwgl.modelViewMatrixStack.length == 0) {
+        throw "Error popModelViewMatrix() - Stack was empty ";
+    }
+    pwgl.modelViewMatrix = pwgl.modelViewMatrixStack.pop();
+}
+
+function setupCubeBuffers() {
+    pwgl.cubeVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexPositionBuffer);
+
+    //draw an illustration to understand the coordinates, if necessary
+    var cubeVertexPosition = [
+
+        // Front face
+        1.0, 1.0, 1.0, //v0
+        -1.0, 1.0, 1.0, //v1
+        -1.0, -1.0, 1.0, //v2
+        1.0, -1.0, 1.0, //v3
+
+        // Back face
+        1.0, 1.0, -1.0, //v4
+        -1.0, 1.0, -1.0, //v5
+        -1.0, -1.0, -1.0, //v6
+        1.0, -1.0, -1.0, //v7
+
+        // Left face
+        -1.0, 1.0, 1.0, //v8
+        -1.0, 1.0, -1.0, //v9
+        -1.0, -1.0, -1.0, //v10
+        -1.0, -1.0, 1.0, //v11      
+
+        // Right face
+        1.0, 1.0, 1.0, //12
+        1.0, -1.0, 1.0, //13
+        1.0, -1.0, -1.0, //14
+        1.0, 1.0, -1.0, //15
+
+        // Top face
+        1.0, 1.0, 1.0, //v16
+        1.0, 1.0, -1.0, //v17
+        -1.0, 1.0, -1.0, //v18
+        -1.0, 1.0, 1.0, //v19
+
+        // Bottom face
+        1.0, -1.0, 1.0, //v20
+        1.0, -1.0, -1.0, //v21
+        -1.0, -1.0, -1.0, //v22
+        -1.0, -1.0, 1.0, //v23
+    ];
+
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeVertexPosition), gl.STATIC_DRAW);
+
+    pwgl.CUBE_VERTEX_POS_BUF_ITEM_SIZE = 3;
+    pwgl.CUBE_VERTEX_POS_BUF_NUM_ITEMS = 24;
+
+    pwgl.cubeVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.cubeVertexIndexBuffer);
+
+    var cubeVertexIndices = [
+        0, 1, 2, 0, 2, 3,    // Front face
+        4, 6, 5, 4, 7, 6,    // Back face
+        8, 9, 10, 8, 10, 11,  // Left face
+        12, 13, 14, 12, 14, 15, // Right face
+        16, 17, 18, 16, 18, 19, // Top face
+        20, 22, 21, 20, 23, 22  // Bottom face
+    ];
+
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
+    pwgl.CUBE_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
+    pwgl.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS = 36;
+
+
+    // // Setup buffer with texture coordinates
+    // pwgl.cubeVertexTextureCoordinateBuffer = gl.createBuffer();
+    // gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexTextureCoordinateBuffer);
+
+    // //Think about how the coordinates are assigned. Ref. vertex coords.
+    // var textureCoordinates = [
+    //     //Front face
+    //     0.0, 0.0, //v0
+    //     1.0, 0.0, //v1
+    //     1.0, 1.0, //v2
+    //     0.0, 1.0, //v3
+
+    //     // Back face
+    //     0.0, 1.0, //v4
+    //     1.0, 1.0, //v5
+    //     1.0, 0.0, //v6
+    //     0.0, 0.0, //v7
+
+    //     // Left face
+    //     0.0, 1.0, //v1
+    //     1.0, 1.0, //v5
+    //     1.0, 0.0, //v6
+    //     0.0, 0.0, //v2
+
+    //     // Right face
+    //     0.0, 1.0, //v0
+    //     1.0, 1.0, //v3
+    //     1.0, 0.0, //v7
+    //     0.0, 0.0, //v4
+
+    //     // Top face
+    //     0.0, 1.0, //v0
+    //     1.0, 1.0, //v4
+    //     1.0, 0.0, //v5
+    //     0.0, 0.0, //v1
+
+    //     // Bottom face
+    //     0.0, 1.0, //v3
+    //     1.0, 1.0, //v7
+    //     1.0, 0.0, //v6
+    //     0.0, 0.0, //v2
+    // ];
+
+    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
+    // pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
+    // pwgl.CUBE_VERTEX_TEX_COORD_BUF_NUM_ITEMS = 24;
+}
+
+function setupSphereBuffers() {
+    let totalLatRings = 50;
+    let totalLongRings = 50;
+    let radius = 10;
+    let earthVertexPosition = [];
+
+    //Create earth position buffer
+    pwgl.earthVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.earthVertexPositionBuffer);
+    for (let latNumber = 0; latNumber <= totalLatRings; ++latNumber) {
+        let theta = latNumber * Math.PI / totalLatRings;
+        let sinTheta = Math.sin(theta);
+        let cosTheta = Math.cos(theta);
+
+        for (let longRing = 0; longRing <= totalLongRings; ++longRing) {
+            let phi = longRing * 2 * Math.PI / totalLongRings;
+
+            let x = Math.cos(phi) * sinTheta;
+            let y = cosTheta;
+            let z = Math.sin(phi) * sinTheta;
+
+            earthVertexPosition.push(radius * x);
+            earthVertexPosition.push(radius * y);
+            earthVertexPosition.push(radius * z);
+        }
+    }
+
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(earthVertexPosition), gl.STATIC_DRAW);
+    pwgl.earthVertexPositionBuffer.EARTH_VERTEX_POS_BUF_ITEM_SIZE = 3;
+    pwgl.earthVertexPositionBuffer.EARTH_VERTEX_POS_BUF_NUM_ITEMS = earthVertexPosition.length/3; //A check this, be see if a better way to be done
+
+    //Create earth index buffer
+    pwgl.earthVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.earthVertexIndexBuffer);
+
+    // Calculate sphere indices.
+    let earthIndices = [];
+    for (let latRing = 0; latRing < totalLatRings; ++latRing) {
+        for (let longRing = 0; longRing < totalLongRings; ++longRing) {
+            let v1 = (latRing * (totalLongRings + 1)) + longRing;  //index of vi,j  
+            let v2 = v1 + totalLongRings + 1;                      //index of vi+1,j
+            let v3 = v1 + 1;                                  //index of vi,j+1 
+            let v4 = v2 + 1;                                  //index of vi+1,j+1
+
+            //Triangle 1
+            earthIndices.push(v1);
+            earthIndices.push(v2);
+            earthIndices.push(v3);
+
+            //Triangle 2
+            earthIndices.push(v3);
+            earthIndices.push(v2);
+            earthIndices.push(v4);
+        }
+    }
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(earthIndices), gl.STATIC_DRAW);
+    pwgl.earthVertexIndexBuffer.EARTH_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
+    pwgl.earthVertexIndexBuffer.EARTH_VERTEX_INDEX_BUF_NUM_ITEMS = earthIndices.length;
+
+
+    ///For the texture make sure the last longitude virtal line meets it's self again
+
+    //Add texture and normals here
+
+}
+
+function setupBuffers() {
+    setupCubeBuffers();
+    setupSphereBuffers();
+}
+
+function uploadModelViewMatrixToShader() {
+    gl.uniformMatrix4fv(pwgl.uniformMVMatrix, false, pwgl.modelViewMatrix);
+}
+
+function uploadProjectionMatrixToShader() {
+    gl.uniformMatrix4fv(pwgl.uniformProjMatrix, false, pwgl.projectionMatrix);
+}
+
+//Draw a cube with a fixed color on one side (black)
+function drawCube(r, g, b, a) {
+    // Disable vertex attrib array and use constant color for the cube.
+    gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
+    // Set color
+    gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexPositionBuffer);
+    gl.vertexAttribPointer(pwgl.vertexPositionAttribute, pwgl.CUBE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.cubeVertexIndexBuffer);
+    gl.drawElements(gl.TRIANGLES, pwgl.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
+}
+
+function drawSphere(r, g, b, a) {
+    gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
+
+    gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.earthVertexPositionBuffer);
+    gl.vertexAttribPointer(pwgl.earthVertexIndexBuffer, pwgl.earthVertexPositionBuffer.EARTH_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.earthVertexIndexBuffer);
+    gl.drawElements(gl.TRIANGLES, pwgl.earthVertexIndexBuffer.EARTH_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
+}
+
+function drawSatillite(r, g, b, a) {
+    pushModelViewMatrix(); //0.0
+        mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
+        mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        //Now draw the scaled cube (satillite body)
+        drawCube(r, g, b, a);
+    popModelViewMatrix();
+
+    // Draw solar panels
+    for (var i=-1; i<=1; i+=2) {
+        pushModelViewMatrix(); //-20
+            mat4.translate(pwgl.modelViewMatrix, [0, 0, i*5], pwgl.modelViewMatrix);
+            mat4.scale(pwgl.modelViewMatrix, [1, 0.01, 2], pwgl.modelViewMatrix);
+            uploadModelViewMatrixToShader();
+            drawCube(0.0, 0.5, 1.0, 1.0);
+        popModelViewMatrix();
+    }
+
+    // Draw panel bars
+    for (var i=-1; i<=1; i+=2) {
+        pushModelViewMatrix(); //-20
+            mat4.translate(pwgl.modelViewMatrix, [0, 0, i*2.5], pwgl.modelViewMatrix);
+            mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.5], pwgl.modelViewMatrix);
+            uploadModelViewMatrixToShader();
+            drawCube(0.81, 0.7, 0.23, 1.0);
+        popModelViewMatrix();
+    }
+
+    //Draw dish
+    pushModelViewMatrix(); //15.6
+        mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
+        //need diameter 4, current rad is 10 so divide by 5
+        mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.2], pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        //Now draw the scaled cube (satillite body)
+        drawSphere(1.0, 0.0, 0.0, 1.0);
+    popModelViewMatrix();
+
+    //draw rod that attaches to dish
+    pushModelViewMatrix(); //-17.6
+        mat4.translate(pwgl.modelViewMatrix, [0, 0, 0], pwgl.modelViewMatrix);
+        mat4.scale(pwgl.modelViewMatrix, [0.2, 0.4, 0.2], pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        drawCube(0.81, 0.7, 0.23, 1.0);
+    popModelViewMatrix();
+}
+
+function startup() {
+    canvas = document.getElementById("myGLCanvas");
+    canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(canvas);
+    canvas.addEventListener('webglcontextlost', handleContextLost, false);
+    canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+
+    //Add eventlisteners
+    document.addEventListener('keydown', handleKeyDown, false);
+    document.addEventListener('keyup', handleKeyup, false);
+    canvas.addEventListener('mousemove', myMouseMove, false);
+    canvas.addEventListener('mousedown', myMouseDown, false);
+    canvas.addEventListener('mouseup', myMouseUp, false);
+    canvas.addEventListener('mousewheel', wheelHandler, false);
+    canvas.addEventListener('DOMmouseScroll', wheelHandler, false);
+
+    gl = createGLContext(canvas);
+    init();
+
+    pwgl.fpsCounter = document.getElementById("fps");
+
+    draw();
+}
+
+function init() {
+    //the initialisation that is performed during the first startup and when the envent webGLcontextRestored is received is included in this
+    setupShaders();
+    setupBuffers();
+    // // setupTextures(); TODO
+    gl.enable(gl.DEPTH_TEST);
+
+    // Initalise some variables for the moving box
+    pwgl.x = 0.0;
+    pwgl.y = 0.0;
+    pwgl.z = 0.0;
+    pwgl.circleRadius = 20.0;
+    pwgl.angle = 0;
+
+    //Init animation variables
+    pwgl.animationStartTime = undefined;
+    pwgl.nbrOfFramesForFPS = 0;
+    pwgl.previousFrameTimeStamp = Date.now();
+
+    // mat4.perspective(60, gl.viewportWidth/gl.viewportHeight, 1, 100.0, pwgl.projectionMatrix);
+    // mat4.identity(pwgl.modelViewMatrix);
+    // mat4.lookAt([8, 12, 8],[0,0,0],[0,1,0], pwgl.modelViewMatrix);
+    mat4.perspective(60, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
+    mat4.identity(pwgl.modelViewMatrix);
+    // Camera position(xyz), ???, ???, ???
+    mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
+}
+
+function draw() {
+    pwgl.requestId = requestAnimFrame(draw);
+
+    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+    gl.clearColor(0.0, 0.0, 0.0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    var currentTime = Date.now();
+
+    handlePressedDownKeys();
+
+    //Update FPS if a second or more has passed since the last frame update
+    if(currentTime - pwgl.previousFrameTimeStamp >= 1000) {
+        pwgl.fpsCounter.innerHTML = pwgl.nbrOfFramesForFPS;
+        pwgl.nbrOfFramesForFPS = 0;
+        pwgl.previousFrameTimeStamp = currentTime;
+    }
+
+    if (pwgl.animationStartTime === undefined) {
+        pwgl.animationStartTime = currentTime;
+    }
+
+    //console.log("1 xRot = " + xRot + "yRot = " + yRot + "t = " + trans1);
+    mat4.translate(pwgl.modelViewMatrix, [0.0, transY, transZ, pwgl.modelViewMatrix]);
+
+    mat4.rotateX(pwgl.modelViewMatrix, xRot/50, pwgl.modelViewMatrix);
+    mat4.rotateY(pwgl.modelViewMatrix, yRot/50, pwgl.modelViewMatrix);
+    //mat4.rotateZ(pwgl.modelViewMatrix, zRot/50, pwgl.modelViewMatrix);
+    yRot = xRot = zRot = transY = transZ = 0;
+
+    uploadModelViewMatrixToShader();
+    uploadProjectionMatrixToShader();
+
+    //Draw blue sphere
+    drawSphere(0.0, 0.0, 1.0, 1.0);
+
+
+
+
+    pushModelViewMatrix();
+    //animate the satillite to orbit the earth
+    pwgl.angle = (currentTime - pwgl.animationStartTime) / 2000 * 2*Math.PI % (2*Math.PI);
+
+    pwgl.x = Math.cos(pwgl.angle) * pwgl.circleRadius;
+    pwgl.z = Math.sin(pwgl.angle) * pwgl.circleRadius;
+    mat4.translate(pwgl.modelViewMatrix, [pwgl.x, pwgl.y, pwgl.z], pwgl.modelViewMatrix);
+
+
+    mat4.rotateY(pwgl.modelViewMatrix, -pwgl.angle, pwgl.modelViewMatrix);
+
+    uploadModelViewMatrixToShader();
+    // Draw satillite on top of the earth
+    drawSatillite(0.81, 0.7, 0.23, 1.0);
+    popModelViewMatrix();
+
+
+
+
+
+    //update the number of frames rendered for that second
+    pwgl.nbrOfFramesForFPS++;
+}
+
+function handleKeyDown(event) {
+    pwgl.listOfPressedKeys[event.keyCode] = true;
+}
+
+function handleKeyup(event) {
+    pwgl.listOfPressedKeys[event.keyCode] = false;
+}
+
+function handlePressedDownKeys() {
+    if (pwgl.listOfPressedKeys[38]) {
+        //Arrow up inc. radius of circle
+        pwgl.circleRadius += 0.1;
+    }
+
+    if (pwgl.listOfPressedKeys[40]) {
+        //Arrow down reduce radius of circle
+        if (pwgl.circleRadius > 0.0) {
+            pwgl.circleRadius -= 0.1;
+        }
+    }
+}
+
+function handleContextLost(event) {
+    event.preventDefault();
+    cancelRequestAnimFrame(pwgl.requestId);
+
+    // Ignore all ongoing image loads by removing
+    // their onload handler
+    for (var i = 0; i < pwgl.ongoingImageLoads.length; i++) {
+        pwgl.ongoingImageLoads[i].onload = undefined;
+    }
+    pwgl.ongoingImageLoads = [];
+}
+
+function handleContextRestored(event) {
+    init();
+    pwgl.requestId = requestAnimFrame(draw, canvas);
+}
+
+function myMouseDown(ev) {
+    drag = 1;
+    xOffs = ev.clientX;
+    yOffs = ev.clientY;
+}
+
+function myMouseUp(ev) {
+    drag = 0;
+} 
+
+function myMouseMove(ev) {
+    if (drag == 0) return;
+
+    if (ev.shiftKey) {
+        transZ = (ev.clientY - yOffs)/10;
+        //zRot = (xOffs - ev.ClientX) * .3;
+    } else if (ev.altKey){
+        transY = -(ev.clientY - yOffs)/10;
+    } else {
+        yRot = - xOffs + ev.clientX;
+        xRot = - yOffs + ev.clientY;
+    }
+
+    xOffs = ev.clientX;
+    yOffs = ev.clientY;
+    //console.log("xOff=" + xOffs + "yOff" + yOffs);
+}
+
+function wheelHandler(ev) {
+    if (ev.altKey)transY = -ev.detail/10;
+    else transZ = ev.detail/10;
+    //console.log("delta = " + ev.detail);
+    ev.preventDefault();
+}
