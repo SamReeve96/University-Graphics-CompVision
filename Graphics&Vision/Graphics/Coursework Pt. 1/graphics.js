@@ -324,7 +324,7 @@ function drawSphere(r, g, b, a) {
 }
 
 function drawSatillite(r, g, b, a) {
-    pushModelViewMatrix(); //0.0
+    pushModelViewMatrix();
         mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
         mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
@@ -334,7 +334,7 @@ function drawSatillite(r, g, b, a) {
 
     // Draw solar panels
     for (var i=-1; i<=1; i+=2) {
-        pushModelViewMatrix(); //-20
+        pushModelViewMatrix();
             mat4.translate(pwgl.modelViewMatrix, [0, 0, i*5], pwgl.modelViewMatrix);
             mat4.scale(pwgl.modelViewMatrix, [1, 0.01, 2], pwgl.modelViewMatrix);
             uploadModelViewMatrixToShader();
@@ -344,7 +344,7 @@ function drawSatillite(r, g, b, a) {
 
     // Draw panel bars
     for (var i=-1; i<=1; i+=2) {
-        pushModelViewMatrix(); //-20
+        pushModelViewMatrix();
             mat4.translate(pwgl.modelViewMatrix, [0, 0, i*2.5], pwgl.modelViewMatrix);
             mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.5], pwgl.modelViewMatrix);
             uploadModelViewMatrixToShader();
@@ -353,8 +353,8 @@ function drawSatillite(r, g, b, a) {
     }
 
     //Draw dish
-    pushModelViewMatrix(); //15.6
-        mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
+    pushModelViewMatrix();
+        mat4.translate(pwgl.modelViewMatrix, [-4.5, 0.0, 0.0], pwgl.modelViewMatrix);
         //need diameter 4, current rad is 10 so divide by 5
         mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.2], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
@@ -364,8 +364,8 @@ function drawSatillite(r, g, b, a) {
 
     //draw rod that attaches to dish
     pushModelViewMatrix(); //-17.6
-        mat4.translate(pwgl.modelViewMatrix, [0, 0, 0], pwgl.modelViewMatrix);
-        mat4.scale(pwgl.modelViewMatrix, [0.2, 0.4, 0.2], pwgl.modelViewMatrix);
+        mat4.translate(pwgl.modelViewMatrix, [-2.5, 0, 0], pwgl.modelViewMatrix);
+        mat4.scale(pwgl.modelViewMatrix, [0.4, 0.2, 0.2], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
         drawCube(0.81, 0.7, 0.23, 1.0);
     popModelViewMatrix();
@@ -457,9 +457,6 @@ function draw() {
 
     //Draw blue sphere
     drawSphere(0.0, 0.0, 1.0, 1.0);
-
-
-
 
     pushModelViewMatrix();
     //animate the satillite to orbit the earth
