@@ -21,6 +21,9 @@ function createGLContext(canvas) {
         }
     }
 
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight * 0.95;
+
     if (context) {
         context.viewportWidth = canvas.width;
         context.viewportHeight = canvas.height;
@@ -222,12 +225,12 @@ function setupCubeBuffers() {
 function setupSphereBuffers() {
     let totalLatRings = 50;
     let totalLongRings = 50;
-    let radius = 10;
-    let earthVertexPosition = [];
+    let radius = 1;
+    let sphereVertexPosition = [];
 
-    //Create earth position buffer
-    pwgl.earthVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.earthVertexPositionBuffer);
+    //Create sphere position buffer
+    pwgl.sphereVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
     for (let latNumber = 0; latNumber <= totalLatRings; ++latNumber) {
         let theta = latNumber * Math.PI / totalLatRings;
         let sinTheta = Math.sin(theta);
@@ -240,22 +243,22 @@ function setupSphereBuffers() {
             let y = cosTheta;
             let z = Math.sin(phi) * sinTheta;
 
-            earthVertexPosition.push(radius * x);
-            earthVertexPosition.push(radius * y);
-            earthVertexPosition.push(radius * z);
+            sphereVertexPosition.push(radius * x);
+            sphereVertexPosition.push(radius * y);
+            sphereVertexPosition.push(radius * z);
         }
     }
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(earthVertexPosition), gl.STATIC_DRAW);
-    pwgl.earthVertexPositionBuffer.EARTH_VERTEX_POS_BUF_ITEM_SIZE = 3;
-    pwgl.earthVertexPositionBuffer.EARTH_VERTEX_POS_BUF_NUM_ITEMS = earthVertexPosition.length/3; //A check this, be see if a better way to be done
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereVertexPosition), gl.STATIC_DRAW);
+    pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE = 3;
+    pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_NUM_ITEMS = sphereVertexPosition.length / 3; //A check this, be see if a better way to be done
 
     //Create earth index buffer
-    pwgl.earthVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.earthVertexIndexBuffer);
+    pwgl.sphereVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
 
     // Calculate sphere indices.
-    let earthIndices = [];
+    let sphereIndices = [];
     for (let latRing = 0; latRing < totalLatRings; ++latRing) {
         for (let longRing = 0; longRing < totalLongRings; ++longRing) {
             let v1 = (latRing * (totalLongRings + 1)) + longRing;  //index of vi,j  
@@ -264,19 +267,19 @@ function setupSphereBuffers() {
             let v4 = v2 + 1;                                  //index of vi+1,j+1
 
             //Triangle 1
-            earthIndices.push(v1);
-            earthIndices.push(v2);
-            earthIndices.push(v3);
+            sphereIndices.push(v1);
+            sphereIndices.push(v2);
+            sphereIndices.push(v3);
 
             //Triangle 2
-            earthIndices.push(v3);
-            earthIndices.push(v2);
-            earthIndices.push(v4);
+            sphereIndices.push(v3);
+            sphereIndices.push(v2);
+            sphereIndices.push(v4);
         }
     }
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(earthIndices), gl.STATIC_DRAW);
-    pwgl.earthVertexIndexBuffer.EARTH_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
-    pwgl.earthVertexIndexBuffer.EARTH_VERTEX_INDEX_BUF_NUM_ITEMS = earthIndices.length;
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), gl.STATIC_DRAW);
+    pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
+    pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS = sphereIndices.length;
 
 
     ///For the texture make sure the last longitude virtal line meets it's self again
@@ -316,64 +319,63 @@ function drawSphere(r, g, b, a) {
     gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
 
     gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.earthVertexPositionBuffer);
-    gl.vertexAttribPointer(pwgl.earthVertexIndexBuffer, pwgl.earthVertexPositionBuffer.EARTH_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
+    gl.vertexAttribPointer(pwgl.sphereVertexIndexBuffer, pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.earthVertexIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, pwgl.earthVertexIndexBuffer.EARTH_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
+    gl.drawElements(gl.TRIANGLES, pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
 }
 
 function drawSatillite(r, g, b, a) {
+    //Now draw the scaled cube (satillite body)
     pushModelViewMatrix();
-        mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
-        mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
-        uploadModelViewMatrixToShader();
-        //Now draw the scaled cube (satillite body)
-        drawCube(r, g, b, a);
+    mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
+    mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
+    uploadModelViewMatrixToShader();
+    drawCube(r, g, b, a);
     popModelViewMatrix();
 
     // Draw solar panels
-    for (var i=-1; i<=1; i+=2) {
+    for (var i = -1; i <= 1; i += 2) {
         pushModelViewMatrix();
-            mat4.translate(pwgl.modelViewMatrix, [0, 0, i*5], pwgl.modelViewMatrix);
-            mat4.scale(pwgl.modelViewMatrix, [1, 0.01, 2], pwgl.modelViewMatrix);
-            uploadModelViewMatrixToShader();
-            drawCube(0.0, 0.5, 1.0, 1.0);
+        mat4.translate(pwgl.modelViewMatrix, [0, 0, i * 5], pwgl.modelViewMatrix);
+        mat4.scale(pwgl.modelViewMatrix, [1, 0.0, 2], pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        drawCube(0.0, 0.5, 1.0, 1.0);
         popModelViewMatrix();
     }
 
     // Draw panel bars
-    for (var i=-1; i<=1; i+=2) {
+    for (var i = -1; i <= 1; i += 2) {
         pushModelViewMatrix();
-            mat4.translate(pwgl.modelViewMatrix, [0, 0, i*2.5], pwgl.modelViewMatrix);
-            mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.5], pwgl.modelViewMatrix);
-            uploadModelViewMatrixToShader();
-            drawCube(0.81, 0.7, 0.23, 1.0);
+        mat4.translate(pwgl.modelViewMatrix, [0, 0, i * 2.5], pwgl.modelViewMatrix);
+        mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.5], pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        drawCube(0.81, 0.7, 0.23, 1.0);
         popModelViewMatrix();
     }
 
     //Draw dish
     pushModelViewMatrix();
-        mat4.translate(pwgl.modelViewMatrix, [-4.5, 0.0, 0.0], pwgl.modelViewMatrix);
-        //need diameter 4, current rad is 10 so divide by 5
-        mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.2], pwgl.modelViewMatrix);
-        uploadModelViewMatrixToShader();
-        //Now draw the scaled cube (satillite body)
-        drawSphere(1.0, 0.0, 0.0, 1.0);
+    mat4.translate(pwgl.modelViewMatrix, [-4.5, 0.0, 0.0], pwgl.modelViewMatrix);
+    mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
+    uploadModelViewMatrixToShader();
+    drawSphere(1.0, 0.0, 0.0, 1.0);
     popModelViewMatrix();
 
     //draw rod that attaches to dish
     pushModelViewMatrix(); //-17.6
-        mat4.translate(pwgl.modelViewMatrix, [-2.5, 0, 0], pwgl.modelViewMatrix);
-        mat4.scale(pwgl.modelViewMatrix, [0.4, 0.2, 0.2], pwgl.modelViewMatrix);
-        uploadModelViewMatrixToShader();
-        drawCube(0.81, 0.7, 0.23, 1.0);
+    mat4.translate(pwgl.modelViewMatrix, [-2.5, 0, 0], pwgl.modelViewMatrix);
+    mat4.scale(pwgl.modelViewMatrix, [0.4, 0.2, 0.2], pwgl.modelViewMatrix);
+    uploadModelViewMatrixToShader();
+    drawCube(0.81, 0.7, 0.23, 1.0);
     popModelViewMatrix();
 }
 
 function startup() {
     canvas = document.getElementById("myGLCanvas");
     canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(canvas);
+
     canvas.addEventListener('webglcontextlost', handleContextLost, false);
     canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
 
@@ -389,9 +391,20 @@ function startup() {
     gl = createGLContext(canvas);
     init();
 
+    window.addEventListener("resize", resizeCanvas, false);
+
     pwgl.fpsCounter = document.getElementById("fps");
 
     draw();
+}
+
+function resizeCanvas() {
+    gl = createGLContext(canvas);
+
+    mat4.perspective(60, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
+    mat4.identity(pwgl.modelViewMatrix);
+    // Camera position(xyz), ???, ???, ???
+    mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
 }
 
 function init() {
@@ -405,8 +418,15 @@ function init() {
     pwgl.x = 0.0;
     pwgl.y = 0.0;
     pwgl.z = 0.0;
-    pwgl.circleRadius = 20.0;
-    pwgl.angle = 0;
+    
+    pwgl.orbitRadius = 20.0;
+    pwgl.minimumOrbitRadius = 15.0;
+    pwgl.orbitSpeed = 2.0;
+    pwgl.minimumOrbitSpeed = 0.1;
+    pwgl.satAngle = 0.0;
+
+    pwgl.earthRotationSpeed = 1.0;
+    pwgl.earthAngle = 0.0;
 
     //Init animation variables
     pwgl.animationStartTime = undefined;
@@ -434,7 +454,7 @@ function draw() {
     handlePressedDownKeys();
 
     //Update FPS if a second or more has passed since the last frame update
-    if(currentTime - pwgl.previousFrameTimeStamp >= 1000) {
+    if (currentTime - pwgl.previousFrameTimeStamp >= 1000) {
         pwgl.fpsCounter.innerHTML = pwgl.nbrOfFramesForFPS;
         pwgl.nbrOfFramesForFPS = 0;
         pwgl.previousFrameTimeStamp = currentTime;
@@ -447,31 +467,38 @@ function draw() {
     //console.log("1 xRot = " + xRot + "yRot = " + yRot + "t = " + trans1);
     mat4.translate(pwgl.modelViewMatrix, [0.0, transY, transZ, pwgl.modelViewMatrix]);
 
-    mat4.rotateX(pwgl.modelViewMatrix, xRot/50, pwgl.modelViewMatrix);
-    mat4.rotateY(pwgl.modelViewMatrix, yRot/50, pwgl.modelViewMatrix);
+    mat4.rotateX(pwgl.modelViewMatrix, xRot / 50, pwgl.modelViewMatrix);
+    mat4.rotateY(pwgl.modelViewMatrix, yRot / 50, pwgl.modelViewMatrix);
     //mat4.rotateZ(pwgl.modelViewMatrix, zRot/50, pwgl.modelViewMatrix);
     yRot = xRot = zRot = transY = transZ = 0;
 
     uploadModelViewMatrixToShader();
     uploadProjectionMatrixToShader();
 
-    //Draw blue sphere
-    drawSphere(0.0, 0.0, 1.0, 1.0);
 
     pushModelViewMatrix();
-    //animate the satillite to orbit the earth
-    pwgl.angle = (currentTime - pwgl.animationStartTime) / 2000 * 2*Math.PI % (2*Math.PI);
+        pwgl.earthAngle = (currentTime - pwgl.animationStartTime) / 2000 * pwgl.earthRotationSpeed * Math.PI % (2 * Math.PI);
+        mat4.scale(pwgl.modelViewMatrix, [10.0, 10.0, 10.0], pwgl.modelViewMatrix)
+        mat4.rotateY(pwgl.modelViewMatrix, -pwgl.earthAngle, pwgl.modelViewMatrix);
 
-    pwgl.x = Math.cos(pwgl.angle) * pwgl.circleRadius;
-    pwgl.z = Math.sin(pwgl.angle) * pwgl.circleRadius;
-    mat4.translate(pwgl.modelViewMatrix, [pwgl.x, pwgl.y, pwgl.z], pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        //Draw blue sphere
+        drawSphere(0.0, 0.0, 1.0, 0.5);
+    popModelViewMatrix();
 
 
-    mat4.rotateY(pwgl.modelViewMatrix, -pwgl.angle, pwgl.modelViewMatrix);
+    pushModelViewMatrix();
+        //animate the satillite to orbit the earth
+        pwgl.satAngle = (currentTime - pwgl.animationStartTime) / 2000 * pwgl.orbitSpeed * Math.PI % (2 * Math.PI);
+        pwgl.x = Math.cos(pwgl.satAngle) * pwgl.orbitRadius;
+        pwgl.z = Math.sin(pwgl.satAngle) * pwgl.orbitRadius;
 
-    uploadModelViewMatrixToShader();
-    // Draw satillite on top of the earth
-    drawSatillite(0.81, 0.7, 0.23, 1.0);
+        mat4.translate(pwgl.modelViewMatrix, [pwgl.x, pwgl.y, pwgl.z], pwgl.modelViewMatrix);
+        mat4.rotateY(pwgl.modelViewMatrix, -pwgl.satAngle, pwgl.modelViewMatrix);
+
+        uploadModelViewMatrixToShader();
+        // Draw satillite on top of the earth
+        drawSatillite(0.81, 0.7, 0.23, 1.0);
     popModelViewMatrix();
 
 
@@ -492,14 +519,26 @@ function handleKeyup(event) {
 
 function handlePressedDownKeys() {
     if (pwgl.listOfPressedKeys[38]) {
-        //Arrow up inc. radius of circle
-        pwgl.circleRadius += 0.1;
+        //Arrow up - increase orbit speed
+        pwgl.orbitSpeed += 0.1;
     }
 
     if (pwgl.listOfPressedKeys[40]) {
-        //Arrow down reduce radius of circle
-        if (pwgl.circleRadius > 0.0) {
-            pwgl.circleRadius -= 0.1;
+        //Arrow down - decrease orbit speed
+        if (pwgl.orbitSpeed > pwgl.minimumOrbitSpeed) {
+            pwgl.orbitSpeed -= 0.1;
+        }
+    }
+
+    if (pwgl.listOfPressedKeys[39]) {
+        //Arrow right - increase orbit radius
+        pwgl.orbitRadius += 0.1;
+    }
+
+    if (pwgl.listOfPressedKeys[37]) {
+        //Arrow left - decrease orbit radius //minimum orbit to prevent clipping with earth
+        if (pwgl.orbitRadius > pwgl.minimumOrbitRadius) {
+            pwgl.orbitRadius -= 0.1;
         }
     }
 }
@@ -529,16 +568,16 @@ function myMouseDown(ev) {
 
 function myMouseUp(ev) {
     drag = 0;
-} 
+}
 
 function myMouseMove(ev) {
     if (drag == 0) return;
 
     if (ev.shiftKey) {
-        transZ = (ev.clientY - yOffs)/10;
+        transZ = (ev.clientY - yOffs) / 10;
         //zRot = (xOffs - ev.ClientX) * .3;
-    } else if (ev.altKey){
-        transY = -(ev.clientY - yOffs)/10;
+    } else if (ev.altKey) {
+        transY = -(ev.clientY - yOffs) / 10;
     } else {
         yRot = - xOffs + ev.clientX;
         xRot = - yOffs + ev.clientY;
@@ -550,8 +589,11 @@ function myMouseMove(ev) {
 }
 
 function wheelHandler(ev) {
-    if (ev.altKey)transY = -ev.detail/10;
-    else transZ = ev.detail/10;
+    if (ev.altKey) {
+        transZ = -ev.detail / 10;
+    } else {
+        transZ = ev.detail / 10;
+    }
     //console.log("delta = " + ev.detail);
     ev.preventDefault();
 }
