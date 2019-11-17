@@ -232,16 +232,21 @@ function setupSphereBuffers() {
     let radius = 1;
     let sphereVertexPosition = [];
     let sphereTextureCoordinates = [];
+    let sphereIndices = [];
 
     //Create sphere position buffer
     pwgl.sphereVertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
-    for (let latRing = 0; latRing <= totalLatRings; ++latRing) {
-        let theta = latRing * Math.PI / totalLatRings;
-        let sinTheta = Math.sin(theta);
-        let cosTheta = Math.cos(theta);
 
+    pwgl.sphereVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
+
+    for (let latRing = 0; latRing <= totalLatRings; ++latRing) {    
         for (let longRing = 0; longRing <= totalLongRings; ++longRing) {
+            let theta = (latRing * Math.PI / totalLatRings) // if you want a semi sphere * 0.5;
+
+            let sinTheta = Math.sin(theta);
+            let cosTheta = Math.cos(theta);
             let phi = longRing * 2 * Math.PI / totalLongRings;
 
             let x = Math.cos(phi) * sinTheta;
@@ -252,21 +257,12 @@ function setupSphereBuffers() {
             sphereVertexPosition.push(radius * y);
             sphereVertexPosition.push(radius * z);
 
-            sphereTextureCoordinates.push(1-(longRing/totalLongRings));
-            sphereTextureCoordinates.push(1-(latRing/totalLatRings));
+            sphereTextureCoordinates.push(1 - (longRing / totalLongRings));
+            sphereTextureCoordinates.push(1 - (latRing / totalLatRings));
         }
     }
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereVertexPosition), gl.STATIC_DRAW);
-    pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE = 3;
-    pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_NUM_ITEMS = sphereVertexPosition.length / 3; //A check this, be see if a better way to be done
-
-    //Create earth index buffer
-    pwgl.sphereVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
-
     // Calculate sphere indices.
-    let sphereIndices = [];
     for (let latRing = 0; latRing < totalLatRings; ++latRing) {
         for (let longRing = 0; longRing < totalLongRings; ++longRing) {
             let v1 = (latRing * (totalLongRings + 1)) + longRing;  //index of vi,j  
@@ -285,6 +281,17 @@ function setupSphereBuffers() {
             sphereIndices.push(v4);
         }
     }
+
+    //Create sphere position buffer
+    pwgl.sphereVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereVertexPosition), gl.STATIC_DRAW);
+    pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE = 3;
+    pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_NUM_ITEMS = sphereVertexPosition.length / 3; //A check this, be see if a better way to be done
+
+    //Create earth index buffer
+    pwgl.sphereVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), gl.STATIC_DRAW);
     pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
     pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS = sphereIndices.length;
