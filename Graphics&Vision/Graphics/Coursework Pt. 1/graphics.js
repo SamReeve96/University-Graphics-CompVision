@@ -371,7 +371,7 @@ function drawCube(r, g, b, a) {
     gl.drawElements(gl.TRIANGLES, pwgl.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
 }
 
-function drawSphere(texture) {
+function drawSphere(texture, r, g, b, a) {
     //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
     //gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
 
@@ -381,8 +381,15 @@ function drawSphere(texture) {
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexTextureCoordinateBuffer);
     gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
 
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    if (texture !== undefined){
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+    } else {
+        var colourTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, colourTex);
+        var colourPixel = new Uint8Array([r, g, b, a]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, colourPixel);
+    }
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
     gl.drawElements(gl.TRIANGLES, pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
@@ -419,10 +426,10 @@ function drawSatillite(r, g, b, a) {
 
     //Draw dish
     pushModelViewMatrix();
-    mat4.translate(pwgl.modelViewMatrix, [-4.5, 0.0, 0.0], pwgl.modelViewMatrix);
-    mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
+    mat4.translate(pwgl.modelViewMatrix, [-6.5, 0.0, 0.0], pwgl.modelViewMatrix);
+    mat4.scale(pwgl.modelViewMatrix, [4.0, 4.0, 4.0], pwgl.modelViewMatrix);
     uploadModelViewMatrixToShader();
-    drawSphere(pwgl.earthTexture);
+    drawSphere(undefined, 255, 0, 0, 1);
     popModelViewMatrix();
 
     //draw rod that attaches to dish
@@ -482,12 +489,12 @@ function init() {
     pwgl.z = 0.0;
     
     pwgl.orbitRadius = 20.0;
-    pwgl.minimumOrbitRadius = 15.0;
+    pwgl.minimumOrbitRadius = 17.0;
     pwgl.orbitSpeed = 2.0;
     pwgl.minimumOrbitSpeed = 0.1;
     pwgl.satAngle = 0.0;
 
-    pwgl.earthRotationSpeed = 1.0;
+    pwgl.earthRotationSpeed = 0.5;
     pwgl.earthAngle = 0.0;
 
     //Init animation variables
