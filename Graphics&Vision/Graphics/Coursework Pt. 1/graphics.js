@@ -1,8 +1,8 @@
 var gl;
+var pwgl = {};
 var canvas;
 var shaderProgram;
-
-var pwgl = {};
+pwgl.ongoingImageLoads = [];
 
 //Vars for translations and rotations
 var transY = transZ = 0;
@@ -83,17 +83,22 @@ function setupShaders() {
     gl.useProgram(shaderProgram);
 
     pwgl.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-    pwgl.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+    pwgl.vertexTextureAttributeLoc = gl.getAttribLocation(shaderProgram, "aTextureCoordinates");
+    pwgl.uniformSamplerLoc = gl.getUniformLocation(shaderProgram, "uSampler");
+    //pwgl.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
 
     pwgl.uniformMVMatrix = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     pwgl.uniformProjMatrix = gl.getUniformLocation(shaderProgram, "uPMatrix");
+
+    gl.enableVertexAttribArray(pwgl.vertexPositionAttributeLoc);
+    //new Texture stuff
+    gl.enableVertexAttribArray(pwgl.vertexTextureAttributeLoc);
 
     //Initalise the matricies
     pwgl.modelViewMatrix = mat4.create();
     pwgl.projectionMatrix = mat4.create();
     pwgl.modelViewMatrixStack = [];
 
-    gl.enableVertexAttribArray(pwgl.vertexPositionAttribute);
 }
 
 function pushModelViewMatrix() {
@@ -173,53 +178,52 @@ function setupCubeBuffers() {
     pwgl.CUBE_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
     pwgl.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS = 36;
 
-
-    // // Setup buffer with texture coordinates
-    // pwgl.cubeVertexTextureCoordinateBuffer = gl.createBuffer();
-    // gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexTextureCoordinateBuffer);
+    // Setup buffer with texture coordinates
+    pwgl.cubeVertexTextureCoordinateBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexTextureCoordinateBuffer);
 
     // //Think about how the coordinates are assigned. Ref. vertex coords.
-    // var textureCoordinates = [
-    //     //Front face
-    //     0.0, 0.0, //v0
-    //     1.0, 0.0, //v1
-    //     1.0, 1.0, //v2
-    //     0.0, 1.0, //v3
+    var cubeTextureCoordinates = [
+        //Front face
+        0.0, 0.0, //v0
+        1.0, 0.0, //v1
+        1.0, 1.0, //v2
+        0.0, 1.0, //v3
 
-    //     // Back face
-    //     0.0, 1.0, //v4
-    //     1.0, 1.0, //v5
-    //     1.0, 0.0, //v6
-    //     0.0, 0.0, //v7
+        // Back face
+        0.0, 1.0, //v4
+        1.0, 1.0, //v5
+        1.0, 0.0, //v6
+        0.0, 0.0, //v7
 
-    //     // Left face
-    //     0.0, 1.0, //v1
-    //     1.0, 1.0, //v5
-    //     1.0, 0.0, //v6
-    //     0.0, 0.0, //v2
+        // Left face
+        0.0, 1.0, //v1
+        1.0, 1.0, //v5
+        1.0, 0.0, //v6
+        0.0, 0.0, //v2
 
-    //     // Right face
-    //     0.0, 1.0, //v0
-    //     1.0, 1.0, //v3
-    //     1.0, 0.0, //v7
-    //     0.0, 0.0, //v4
+        // Right face
+        0.0, 1.0, //v0
+        1.0, 1.0, //v3
+        1.0, 0.0, //v7
+        0.0, 0.0, //v4
 
-    //     // Top face
-    //     0.0, 1.0, //v0
-    //     1.0, 1.0, //v4
-    //     1.0, 0.0, //v5
-    //     0.0, 0.0, //v1
+        // Top face
+        0.0, 1.0, //v0
+        1.0, 1.0, //v4
+        1.0, 0.0, //v5
+        0.0, 0.0, //v1
 
-    //     // Bottom face
-    //     0.0, 1.0, //v3
-    //     1.0, 1.0, //v7
-    //     1.0, 0.0, //v6
-    //     0.0, 0.0, //v2
-    // ];
+        // Bottom face
+        0.0, 1.0, //v3
+        1.0, 1.0, //v7
+        1.0, 0.0, //v6
+        0.0, 0.0, //v2
+    ];
 
-    // gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
-    // pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
-    // pwgl.CUBE_VERTEX_TEX_COORD_BUF_NUM_ITEMS = 24;
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeTextureCoordinates), gl.STATIC_DRAW);
+    pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
+    pwgl.CUBE_VERTEX_TEX_COORD_BUF_NUM_ITEMS = 24;
 }
 
 function setupSphereBuffers() {
@@ -227,12 +231,13 @@ function setupSphereBuffers() {
     let totalLongRings = 50;
     let radius = 1;
     let sphereVertexPosition = [];
+    let sphereTextureCoordinates = [];
 
     //Create sphere position buffer
     pwgl.sphereVertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
-    for (let latNumber = 0; latNumber <= totalLatRings; ++latNumber) {
-        let theta = latNumber * Math.PI / totalLatRings;
+    for (let latRing = 0; latRing <= totalLatRings; ++latRing) {
+        let theta = latRing * Math.PI / totalLatRings;
         let sinTheta = Math.sin(theta);
         let cosTheta = Math.cos(theta);
 
@@ -246,6 +251,9 @@ function setupSphereBuffers() {
             sphereVertexPosition.push(radius * x);
             sphereVertexPosition.push(radius * y);
             sphereVertexPosition.push(radius * z);
+
+            sphereTextureCoordinates.push(1-(longRing/totalLongRings));
+            sphereTextureCoordinates.push(1-(latRing/totalLatRings));
         }
     }
 
@@ -283,14 +291,53 @@ function setupSphereBuffers() {
 
 
     ///For the texture make sure the last longitude virtal line meets it's self again
+    // texture coordinates are pushed when the positions are created
+    pwgl.sphereVertexTextureCoordinateBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexTextureCoordinateBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereTextureCoordinates), gl.STATIC_DRAW);
+    pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
+    pwgl.SPHERE_VERTEX_TEX_COORD_BUF_NUM_ITEMS = sphereTextureCoordinates.length/pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE;
 
-    //Add texture and normals here
+    //Add normals here
 
 }
 
 function setupBuffers() {
     setupCubeBuffers();
     setupSphereBuffers();
+}
+
+function setupTextures() {
+    //Texture for the earth
+    pwgl.earthTexture = gl.createTexture();
+    loadImageForTexture('earth.jpg', pwgl.earthTexture);
+}
+
+function loadImageForTexture(url, texture) {
+    var image = new Image();
+    image.onload = function() {
+        pwgl.ongoingImageLoads.splice(pwgl.ongoingImageLoads.indexOf(image), 1);
+        //Splice adds/removes items to and from an array
+        textureFinishedLoading(image, texture);
+    }
+    pwgl.ongoingImageLoads.push(image);
+    image.src = url;
+}
+
+function textureFinishedLoading(image, texture) {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+    gl.generateMipmap(gl.TEXTURE_2D);
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
 function uploadModelViewMatrixToShader() {
@@ -304,23 +351,38 @@ function uploadProjectionMatrixToShader() {
 //Draw a cube with a fixed color on one side (black)
 function drawCube(r, g, b, a) {
     // Disable vertex attrib array and use constant color for the cube.
-    gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
-    // Set color
-    gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
+    //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexPositionBuffer);
     gl.vertexAttribPointer(pwgl.vertexPositionAttribute, pwgl.CUBE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexTextureCoordinateBuffer);
+    gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    var colourTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, colourTex);
+    var colourPixel = new Uint8Array([r, g, b, a]);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, colourPixel);
+
+    //gl.activeTexture(gl.TEXTURE0);
+    //gl.bindTexture(gl.TEXTURE_2D, texture);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.cubeVertexIndexBuffer);
     gl.drawElements(gl.TRIANGLES, pwgl.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
 }
 
-function drawSphere(r, g, b, a) {
-    gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
+function drawSphere(texture) {
+    //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
+    //gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
 
-    gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
     gl.vertexAttribPointer(pwgl.sphereVertexIndexBuffer, pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexTextureCoordinateBuffer);
+    gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
     gl.drawElements(gl.TRIANGLES, pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
@@ -332,7 +394,7 @@ function drawSatillite(r, g, b, a) {
     mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
     mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
     uploadModelViewMatrixToShader();
-    drawCube(r, g, b, a);
+    drawCube(255, 215, 0, 1);
     popModelViewMatrix();
 
     // Draw solar panels
@@ -341,7 +403,7 @@ function drawSatillite(r, g, b, a) {
         mat4.translate(pwgl.modelViewMatrix, [0, 0, i * 5], pwgl.modelViewMatrix);
         mat4.scale(pwgl.modelViewMatrix, [1, 0.0, 2], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
-        drawCube(0.0, 0.5, 1.0, 1.0);
+        drawCube(129, 212, 250 ,1);
         popModelViewMatrix();
     }
 
@@ -351,7 +413,7 @@ function drawSatillite(r, g, b, a) {
         mat4.translate(pwgl.modelViewMatrix, [0, 0, i * 2.5], pwgl.modelViewMatrix);
         mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.5], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
-        drawCube(0.81, 0.7, 0.23, 1.0);
+        drawCube(255, 215, 0, 1);
         popModelViewMatrix();
     }
 
@@ -360,7 +422,7 @@ function drawSatillite(r, g, b, a) {
     mat4.translate(pwgl.modelViewMatrix, [-4.5, 0.0, 0.0], pwgl.modelViewMatrix);
     mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
     uploadModelViewMatrixToShader();
-    drawSphere(1.0, 0.0, 0.0, 1.0);
+    drawSphere(pwgl.earthTexture);
     popModelViewMatrix();
 
     //draw rod that attaches to dish
@@ -368,7 +430,7 @@ function drawSatillite(r, g, b, a) {
     mat4.translate(pwgl.modelViewMatrix, [-2.5, 0, 0], pwgl.modelViewMatrix);
     mat4.scale(pwgl.modelViewMatrix, [0.4, 0.2, 0.2], pwgl.modelViewMatrix);
     uploadModelViewMatrixToShader();
-    drawCube(0.81, 0.7, 0.23, 1.0);
+    drawCube(255, 215, 0, 1);
     popModelViewMatrix();
 }
 
@@ -411,7 +473,7 @@ function init() {
     //the initialisation that is performed during the first startup and when the envent webGLcontextRestored is received is included in this
     setupShaders();
     setupBuffers();
-    // // setupTextures(); TODO
+    setupTextures();
     gl.enable(gl.DEPTH_TEST);
 
     // Initalise some variables for the moving box
@@ -483,7 +545,7 @@ function draw() {
 
         uploadModelViewMatrixToShader();
         //Draw blue sphere
-        drawSphere(0.0, 0.0, 1.0, 0.5);
+        drawSphere(pwgl.earthTexture);
     popModelViewMatrix();
 
 
