@@ -289,7 +289,7 @@ function setupSphereBuffers() {
     pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE = 3;
     pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_NUM_ITEMS = sphereVertexPosition.length / 3; //A check this, be see if a better way to be done
 
-    //Create earth index buffer
+    //Create sphere index buffer
     pwgl.sphereVertexIndexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), gl.STATIC_DRAW);
@@ -309,9 +309,91 @@ function setupSphereBuffers() {
 
 }
 
+function setupDishBuffers(sphereCompletion = 1) {
+    let totalLatRings = 50;
+    let totalLongRings = 50;
+    let radius = 1;
+    let dishVertexPosition = [];
+    let dishTextureCoordinates = [];
+    let dishIndices = [];
+
+    //Create sphere position buffer
+    pwgl.dishVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexPositionBuffer);
+
+    pwgl.dishVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.dishVertexIndexBuffer);
+
+    for (let latRing = 0; latRing <= totalLatRings; ++latRing) {    
+        for (let longRing = 0; longRing <= totalLongRings; ++longRing) {
+            let theta = (latRing * Math.PI / totalLatRings) * 0.5
+
+            let sinTheta = Math.sin(theta);
+            let cosTheta = Math.cos(theta);
+            let phi = longRing * 2 * Math.PI / totalLongRings;
+
+            let x = Math.cos(phi) * sinTheta;
+            let y = cosTheta;
+            let z = Math.sin(phi) * sinTheta;
+
+            dishVertexPosition.push(radius * x);
+            dishVertexPosition.push(radius * y);
+            dishVertexPosition.push(radius * z);
+
+            dishTextureCoordinates.push(1 - (longRing / totalLongRings));
+            dishTextureCoordinates.push(1 - (latRing / totalLatRings));
+        }
+    }
+
+    // Calculate sphere indices.
+    for (let latRing = 0; latRing < totalLatRings; ++latRing) {
+        for (let longRing = 0; longRing < totalLongRings; ++longRing) {
+            let v1 = (latRing * (totalLongRings + 1)) + longRing;  //index of vi,j  
+            let v2 = v1 + totalLongRings + 1;                      //index of vi+1,j
+            let v3 = v1 + 1;                                  //index of vi,j+1 
+            let v4 = v2 + 1;                                  //index of vi+1,j+1
+
+            //Triangle 1
+            dishIndices.push(v1);
+            dishIndices.push(v2);
+            dishIndices.push(v3);
+
+            //Triangle 2
+            dishIndices.push(v3);
+            dishIndices.push(v2);
+            dishIndices.push(v4);
+        }
+    }
+
+    //Create dish position buffer
+    pwgl.dishVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexPositionBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dishVertexPosition), gl.STATIC_DRAW);
+    pwgl.dishVertexPositionBuffer.DISH_VERTEX_POS_BUF_ITEM_SIZE = 3;
+    pwgl.dishVertexPositionBuffer.DISH_VERTEX_POS_BUF_NUM_ITEMS = dishVertexPosition.length / 3; //A check this, be see if a better way to be done
+
+    //Create dish index buffer
+    pwgl.dishVertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.dishVertexIndexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(dishIndices), gl.STATIC_DRAW);
+    pwgl.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
+    pwgl.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_NUM_ITEMS = dishIndices.length;
+
+    // texture coordinates are pushed when the positions are created
+    pwgl.dishVertexTextureCoordinateBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexTextureCoordinateBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dishTextureCoordinates), gl.STATIC_DRAW);
+    pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
+    pwgl.DISH_VERTEX_TEX_COORD_BUF_NUM_ITEMS = dishTextureCoordinates.length/pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE;
+
+    //Add normals here
+
+}
+
 function setupBuffers() {
     setupCubeBuffers();
     setupSphereBuffers();
+    setupDishBuffers();
 }
 
 function setupTextures() {
@@ -402,6 +484,30 @@ function drawSphere(texture, r, g, b, a) {
     gl.drawElements(gl.TRIANGLES, pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
 }
 
+function drawDish(texture, r, g, b, a) {
+    //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
+    //gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexPositionBuffer);
+    gl.vertexAttribPointer(pwgl.dishVertexIndexBuffer, pwgl.dishVertexPositionBuffer.DISH_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexTextureCoordinateBuffer);
+    gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    if (texture !== undefined){
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+    } else {
+        var colourTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, colourTex);
+        var colourPixel = new Uint8Array([r, g, b, a]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, colourPixel);
+    }
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.dishVertexIndexBuffer);
+    gl.drawElements(gl.TRIANGLES, pwgl.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
+}
+
 function drawSatillite(r, g, b, a) {
     //Now draw the scaled cube (satillite body)
     pushModelViewMatrix();
@@ -433,18 +539,20 @@ function drawSatillite(r, g, b, a) {
 
     //Draw dish
     pushModelViewMatrix();
-    mat4.translate(pwgl.modelViewMatrix, [-6.5, 0.0, 0.0], pwgl.modelViewMatrix);
-    mat4.scale(pwgl.modelViewMatrix, [4.0, 4.0, 4.0], pwgl.modelViewMatrix);
-    uploadModelViewMatrixToShader();
-    drawSphere(undefined, 255, 0, 0, 1);
+        mat4.translate(pwgl.modelViewMatrix, [-6.5, 0.0, 0.0], pwgl.modelViewMatrix);
+        mat4.scale(pwgl.modelViewMatrix, [4.0, 4.0, 4.0], pwgl.modelViewMatrix);
+        mat4.rotateX(pwgl.modelViewMatrix, 80, pwgl.modelViewMatrix);
+        mat4.rotateZ(pwgl.modelViewMatrix, 80, pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        drawDish(undefined, 255, 215, 0, 1);
     popModelViewMatrix();
 
     //draw rod that attaches to dish
     pushModelViewMatrix(); //-17.6
-    mat4.translate(pwgl.modelViewMatrix, [-2.5, 0, 0], pwgl.modelViewMatrix);
-    mat4.scale(pwgl.modelViewMatrix, [0.4, 0.2, 0.2], pwgl.modelViewMatrix);
-    uploadModelViewMatrixToShader();
-    drawCube(255, 215, 0, 1);
+        mat4.translate(pwgl.modelViewMatrix, [-2.5, 0, 0], pwgl.modelViewMatrix);
+        mat4.scale(pwgl.modelViewMatrix, [0.4, 0.2, 0.2], pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        drawCube(255, 215, 0, 1);
     popModelViewMatrix();
 }
 
@@ -477,7 +585,7 @@ function startup() {
 function resizeCanvas() {
     gl = createGLContext(canvas);
 
-    mat4.perspective(60, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
+    mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
     mat4.identity(pwgl.modelViewMatrix);
     // Camera position(xyz), ???, ???, ???
     mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
@@ -512,7 +620,7 @@ function init() {
     // mat4.perspective(60, gl.viewportWidth/gl.viewportHeight, 1, 100.0, pwgl.projectionMatrix);
     // mat4.identity(pwgl.modelViewMatrix);
     // mat4.lookAt([8, 12, 8],[0,0,0],[0,1,0], pwgl.modelViewMatrix);
-    mat4.perspective(60, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
+    mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
     mat4.identity(pwgl.modelViewMatrix);
     // Camera position(xyz), ???, ???, ???
     mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
