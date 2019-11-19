@@ -1,8 +1,7 @@
 var gl;
 var pwgl = {};
-var canvas;
-var shaderProgram;
 pwgl.ongoingImageLoads = [];
+var canvas;
 
 //Vars for translations and rotations
 var transY = transZ = 0;
@@ -71,7 +70,7 @@ function setupShaders() {
     var vertexShader = loadShaderFromDOM("shader-vs");
     var fragmentShader = loadShaderFromDOM("shader-fs");
 
-    shaderProgram = gl.createProgram();
+    var shaderProgram = gl.createProgram();
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
