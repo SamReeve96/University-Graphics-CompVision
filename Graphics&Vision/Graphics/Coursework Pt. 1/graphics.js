@@ -555,76 +555,6 @@ function drawSatillite(r, g, b, a) {
     popModelViewMatrix();
 }
 
-function startup() {
-    canvas = document.getElementById("myGLCanvas");
-    canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(canvas);
-
-    canvas.addEventListener('webglcontextlost', handleContextLost, false);
-    canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
-
-    //Add eventlisteners
-    document.addEventListener('keydown', handleKeyDown, false);
-    document.addEventListener('keyup', handleKeyup, false);
-    canvas.addEventListener('mousemove', myMouseMove, false);
-    canvas.addEventListener('mousedown', myMouseDown, false);
-    canvas.addEventListener('mouseup', myMouseUp, false);
-    canvas.addEventListener('mousewheel', wheelHandler, false);
-    canvas.addEventListener('DOMmouseScroll', wheelHandler, false);
-
-    gl = createGLContext(canvas);
-    init();
-
-    window.addEventListener("resize", resizeCanvas, false);
-
-    pwgl.fpsCounter = document.getElementById("fps");
-
-    draw();
-}
-
-function resizeCanvas() {
-    gl = createGLContext(canvas);
-
-    mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
-    mat4.identity(pwgl.modelViewMatrix);
-    // Camera position(xyz), ???, ???, ???
-    mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
-}
-
-function init() {
-    //the initialisation that is performed during the first startup and when the envent webGLcontextRestored is received is included in this
-    setupShaders();
-    setupBuffers();
-    setupTextures();
-    gl.enable(gl.DEPTH_TEST);
-
-    // Initalise some variables for the moving box
-    pwgl.x = 0.0;
-    pwgl.y = 0.0;
-    pwgl.z = 0.0;
-    
-    pwgl.orbitRadius = 20.0;
-    pwgl.minimumOrbitRadius = 17.0;
-    pwgl.orbitSpeed = 2.0;
-    pwgl.minimumOrbitSpeed = 0.1;
-    pwgl.satAngle = 0.0;
-
-    pwgl.earthRotationSpeed = 0.5;
-    pwgl.earthAngle = 0.0;
-
-    //Init animation variables
-    pwgl.animationStartTime = undefined;
-    pwgl.nbrOfFramesForFPS = 0;
-    pwgl.previousFrameTimeStamp = Date.now();
-
-    // mat4.perspective(60, gl.viewportWidth/gl.viewportHeight, 1, 100.0, pwgl.projectionMatrix);
-    // mat4.identity(pwgl.modelViewMatrix);
-    // mat4.lookAt([8, 12, 8],[0,0,0],[0,1,0], pwgl.modelViewMatrix);
-    mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
-    mat4.identity(pwgl.modelViewMatrix);
-    // Camera position(xyz), ???, ???, ???
-    mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
-}
-
 function draw() {
     pwgl.requestId = requestAnimFrame(draw);
 
@@ -690,6 +620,76 @@ function draw() {
 
     //update the number of frames rendered for that second
     pwgl.nbrOfFramesForFPS++;
+}
+
+function startup() {
+    canvas = document.getElementById("myGLCanvas");
+    canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(canvas);
+
+    canvas.addEventListener('webglcontextlost', handleContextLost, false);
+    canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+
+    //Add eventlisteners
+    document.addEventListener('keydown', handleKeyDown, false);
+    document.addEventListener('keyup', handleKeyup, false);
+    canvas.addEventListener('mousemove', myMouseMove, false);
+    canvas.addEventListener('mousedown', myMouseDown, false);
+    canvas.addEventListener('mouseup', myMouseUp, false);
+    canvas.addEventListener('mousewheel', wheelHandler, false);
+    canvas.addEventListener('DOMmouseScroll', wheelHandler, false);
+
+    gl = createGLContext(canvas);
+    init();
+
+    window.addEventListener("resize", resizeCanvas, false);
+
+    pwgl.fpsCounter = document.getElementById("fps");
+
+    draw();
+}
+
+function init() {
+    //the initialisation that is performed during the first startup and when the envent webGLcontextRestored is received is included in this
+    setupShaders();
+    setupBuffers();
+    setupTextures();
+    gl.enable(gl.DEPTH_TEST);
+
+    // Initalise some variables for the moving box
+    pwgl.x = 0.0;
+    pwgl.y = 0.0;
+    pwgl.z = 0.0;
+    
+    pwgl.orbitRadius = 20.0;
+    pwgl.minimumOrbitRadius = 17.0;
+    pwgl.orbitSpeed = 2.0;
+    pwgl.minimumOrbitSpeed = 0.1;
+    pwgl.satAngle = 0.0;
+
+    pwgl.earthRotationSpeed = 0.5;
+    pwgl.earthAngle = 0.0;
+
+    //Init animation variables
+    pwgl.animationStartTime = undefined;
+    pwgl.nbrOfFramesForFPS = 0;
+    pwgl.previousFrameTimeStamp = Date.now();
+
+    // mat4.perspective(60, gl.viewportWidth/gl.viewportHeight, 1, 100.0, pwgl.projectionMatrix);
+    // mat4.identity(pwgl.modelViewMatrix);
+    // mat4.lookAt([8, 12, 8],[0,0,0],[0,1,0], pwgl.modelViewMatrix);
+    mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
+    mat4.identity(pwgl.modelViewMatrix);
+    // Camera position(xyz), ???, ???, ???
+    mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
+}
+
+function resizeCanvas() {
+    gl = createGLContext(canvas);
+
+    mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
+    mat4.identity(pwgl.modelViewMatrix);
+    // Camera position(xyz), ???, ???, ???
+    mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
 }
 
 function handleKeyDown(event) {
