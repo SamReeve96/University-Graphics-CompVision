@@ -613,11 +613,7 @@ function draw() {
         // Draw satillite on top of the earth
         drawSatillite(0.81, 0.7, 0.23, 1.0);
     popModelViewMatrix();
-
-
-
-
-
+    
     //update the number of frames rendered for that second
     pwgl.nbrOfFramesForFPS++;
 }
