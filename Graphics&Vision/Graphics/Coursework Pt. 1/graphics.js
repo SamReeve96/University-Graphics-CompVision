@@ -21,6 +21,7 @@ function createGLContext(canvas) {
     }
 
     canvas.width = window.innerWidth;
+    //so the canvas isnt full screen and can show the fps counter
     canvas.height = window.innerHeight * 0.95;
 
     if (context) {
@@ -81,16 +82,23 @@ function setupShaders() {
 
     gl.useProgram(shaderProgram);
 
-    pwgl.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    pwgl.vertexPositionAttributeLoc = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    pwgl.uniformMVMatrixLoc = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    pwgl.uniformProjMatrixLoc = gl.getUniformLocation(shaderProgram, "uPMatrix");
+
     pwgl.vertexTextureAttributeLoc = gl.getAttribLocation(shaderProgram, "aTextureCoordinates");
     pwgl.uniformSamplerLoc = gl.getUniformLocation(shaderProgram, "uSampler");
-    //pwgl.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
 
-    pwgl.uniformMVMatrix = gl.getUniformLocation(shaderProgram, "uMVMatrix");
-    pwgl.uniformProjMatrix = gl.getUniformLocation(shaderProgram, "uPMatrix");
+    pwgl.uniformNormalMatrixLoc = gl.getUniformLocation(shaderProgram, "uNMatrix");
+    pwgl.vertexNormalAttributeLoc = gl.getAttribLocation(shaderProgram, "aVertexNormal");
 
+    pwgl.uniformLightPositionLoc = gl.getUniformLocation(shaderProgram, "uLightPosition");
+    pwgl.uniformAmbientLightColorLoc = gl.getUniformLocation(shaderProgram, "uAmbientLightColor");
+    pwgl.uniformDiffuseLightColorLoc = gl.getUniformLocation(shaderProgram, "uDiffuseLightColor");
+    pwgl.uniformSpecularLightColorLoc = gl.getUniformLocation(shaderProgram, "uSpecularLightColor");
+
+    gl.enableVertexAttribArray(pwgl.vertexNormalAttributeLoc);
     gl.enableVertexAttribArray(pwgl.vertexPositionAttributeLoc);
-    //new Texture stuff
     gl.enableVertexAttribArray(pwgl.vertexTextureAttributeLoc);
 
     //Initalise the matricies
@@ -223,6 +231,51 @@ function setupCubeBuffers() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeTextureCoordinates), gl.STATIC_DRAW);
     pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
     pwgl.CUBE_VERTEX_TEX_COORD_BUF_NUM_ITEMS = 24;
+
+    // Specify normals to be able to do lighting calculations
+    pwgl.cubeVertexNormalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexNormalBuffer);
+    var cubeVertexNormals = [
+        // Front face
+        0.0,  0.0,  1.0, //v0
+        0.0,  0.0,  1.0, //v1
+        0.0,  0.0,  1.0, //v2
+        0.0,  0.0,  1.0, //v3
+
+        // Back face
+        0.0,  0.0, -1.0, //v4
+        0.0,  0.0, -1.0, //v5
+        0.0,  0.0, -1.0, //v6
+        0.0,  0.0, -1.0, //v7
+
+        // Left face
+        -1.0,  0.0,  0.0, //v1
+        -1.0,  0.0,  0.0, //v5
+        -1.0,  0.0,  0.0, //v6
+        -1.0,  0.0,  0.0, //v2
+
+        // Right face
+        1.0,  0.0,  0.0, //0
+        1.0,  0.0,  0.0, //3
+        1.0,  0.0,  0.0, //7
+        1.0,  0.0,  0.0, //4
+
+        // Top face
+        0.0,  1.0,  0.0, //v0
+        0.0,  1.0,  0.0, //v4
+        0.0,  1.0,  0.0, //v5
+        0.0,  1.0,  0.0, //v1
+
+        // Bottom face
+        0.0, -1.0,  0.0, //v3
+        0.0, -1.0,  0.0, //v7
+        0.0, -1.0,  0.0, //v6
+        0.0, -1.0,  0.0, //v2
+    ];
+
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeVertexNormals), gl.STATIC_DRAW);
+    pwgl.CUBE_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
+    pwgl.CUBE_VERTEX_NORMAL_BUF_NUM_ITEMS = 24;
 }
 
 function setupSphereBuffers() {
@@ -232,6 +285,7 @@ function setupSphereBuffers() {
     let sphereVertexPosition = [];
     let sphereTextureCoordinates = [];
     let sphereIndices = [];
+    let sphereVertexNormals = [];
 
     //Create sphere position buffer
     pwgl.sphereVertexPositionBuffer = gl.createBuffer();
@@ -258,6 +312,10 @@ function setupSphereBuffers() {
 
             sphereTextureCoordinates.push(1 - (longRing / totalLongRings));
             sphereTextureCoordinates.push(1 - (latRing / totalLatRings));
+
+            sphereVertexNormals.push(x);
+            sphereVertexNormals.push(y);
+            sphereVertexNormals.push(z);
         }
     }
 
@@ -305,18 +363,25 @@ function setupSphereBuffers() {
     pwgl.SPHERE_VERTEX_TEX_COORD_BUF_NUM_ITEMS = sphereTextureCoordinates.length/pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE;
 
     //Add normals here
+    // Specify normals to be able to do lighting calculations
+    pwgl.sphereVertexNormalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexNormalBuffer);
 
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereVertexNormals), gl.STATIC_DRAW);
+    pwgl.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
+    pwgl.SPHERE_VERTEX_NORMAL_BUF_NUM_ITEMS = sphereVertexNormals.length / pwgl.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE;
 }
 
-function setupDishBuffers(sphereCompletion = 1) {
+function setupDishBuffers() {
     let totalLatRings = 50;
     let totalLongRings = 50;
     let radius = 1;
     let dishVertexPosition = [];
     let dishTextureCoordinates = [];
     let dishIndices = [];
+    let dishVertexNormals = [];
 
-    //Create sphere position buffer
+    //Create dish position buffer
     pwgl.dishVertexPositionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexPositionBuffer);
 
@@ -341,10 +406,14 @@ function setupDishBuffers(sphereCompletion = 1) {
 
             dishTextureCoordinates.push(1 - (longRing / totalLongRings));
             dishTextureCoordinates.push(1 - (latRing / totalLatRings));
+
+            dishVertexNormals.push(x);
+            dishVertexNormals.push(y);
+            dishVertexNormals.push(z);
         }
     }
 
-    // Calculate sphere indices.
+    // Calculate dish indices.
     for (let latRing = 0; latRing < totalLatRings; ++latRing) {
         for (let longRing = 0; longRing < totalLongRings; ++longRing) {
             let v1 = (latRing * (totalLongRings + 1)) + longRing;  //index of vi,j  
@@ -385,9 +454,14 @@ function setupDishBuffers(sphereCompletion = 1) {
     pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
     pwgl.DISH_VERTEX_TEX_COORD_BUF_NUM_ITEMS = dishTextureCoordinates.length/pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE;
 
-    //Add normals here
+    // Specify normals to be able to do lighting calculations
+    pwgl.dishVertexNormalBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexNormalBuffer);
 
-}
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dishVertexNormals), gl.STATIC_DRAW);
+    pwgl.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
+    pwgl.DISH_VERTEX_NORMAL_BUF_NUM_ITEMS = dishVertexNormals.length / pwgl.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE;
+ }
 
 function setupBuffers() {
     setupCubeBuffers();
@@ -428,12 +502,26 @@ function textureFinishedLoading(image, texture) {
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
+function setupLights() {
+    gl.uniform3fv(pwgl.uniformLightPositionLoc, [10.0, 10.0, 10.0]);
+    gl.uniform3fv(pwgl.uniformAmbientLightColorLoc, [0.2, 0.2, 0.2]);
+    gl.uniform3fv(pwgl.uniformDiffuseLightColorLoc, [0.7, 0.7, 0.7]);
+    gl.uniform3fv(pwgl.uniformSpecularLightColorLoc, [0.8, 0.8, 0.8]);
+}
+
+function uploadNormalMatrixToShader() {
+    var normalMatrix = mat3.create();
+    mat4.toInverseMat3(pwgl.modelViewMatrix, normalMatrix);
+    mat3.transpose(normalMatrix);
+    gl.uniformMatrix3fv(pwgl.uniformNormalMatrixLoc, false, normalMatrix);
+}
+
 function uploadModelViewMatrixToShader() {
-    gl.uniformMatrix4fv(pwgl.uniformMVMatrix, false, pwgl.modelViewMatrix);
+    gl.uniformMatrix4fv(pwgl.uniformMVMatrixLoc, false, pwgl.modelViewMatrix);
 }
 
 function uploadProjectionMatrixToShader() {
-    gl.uniformMatrix4fv(pwgl.uniformProjMatrix, false, pwgl.projectionMatrix);
+    gl.uniformMatrix4fv(pwgl.uniformProjMatrixLoc, false, pwgl.projectionMatrix);
 }
 
 //Draw a cube with a fixed color on one side (black)
@@ -442,7 +530,10 @@ function drawCube(r, g, b, a) {
     //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexPositionBuffer);
-    gl.vertexAttribPointer(pwgl.vertexPositionAttribute, pwgl.CUBE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(pwgl.vertexPositionAttributeLoc, pwgl.CUBE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexNormalBuffer);
+    gl.vertexAttribPointer(pwgl.vertexNormalAttributeLoc, pwgl.CUBE_VERTEX_NORMAL_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexTextureCoordinateBuffer);
     gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
@@ -464,7 +555,10 @@ function drawSphere(texture, r, g, b, a) {
     //gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
-    gl.vertexAttribPointer(pwgl.sphereVertexIndexBuffer, pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(pwgl.vertexPositionAttributeLoc, pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexNormalBuffer);
+    gl.vertexAttribPointer(pwgl.vertexNormalAttributeLoc, pwgl.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexTextureCoordinateBuffer);
     gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
@@ -488,7 +582,10 @@ function drawDish(texture, r, g, b, a) {
     //gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexPositionBuffer);
-    gl.vertexAttribPointer(pwgl.dishVertexIndexBuffer, pwgl.dishVertexPositionBuffer.DISH_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(pwgl.vertexPositionAttributeLoc, pwgl.dishVertexPositionBuffer.DISH_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexNormalBuffer);
+    gl.vertexAttribPointer(pwgl.vertexNormalAttributeLoc, pwgl.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexTextureCoordinateBuffer);
     gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
@@ -587,7 +684,7 @@ function draw() {
 
     uploadModelViewMatrixToShader();
     uploadProjectionMatrixToShader();
-
+    uploadNormalMatrixToShader();
 
     pushModelViewMatrix();
         pwgl.earthAngle = (currentTime - pwgl.animationStartTime) / 2000 * pwgl.earthRotationSpeed * Math.PI % (2 * Math.PI);
@@ -595,7 +692,9 @@ function draw() {
         mat4.rotateY(pwgl.modelViewMatrix, -pwgl.earthAngle, pwgl.modelViewMatrix);
 
         uploadModelViewMatrixToShader();
-        //Draw blue sphere
+        uploadNormalMatrixToShader();
+
+        //Draw earth
         drawSphere(pwgl.earthTexture);
     popModelViewMatrix();
 
@@ -610,6 +709,8 @@ function draw() {
         mat4.rotateY(pwgl.modelViewMatrix, -pwgl.satAngle, pwgl.modelViewMatrix);
 
         uploadModelViewMatrixToShader();
+        uploadNormalMatrixToShader();
+
         // Draw satillite on top of the earth
         drawSatillite(0.81, 0.7, 0.23, 1.0);
     popModelViewMatrix();
@@ -648,10 +749,11 @@ function init() {
     //the initialisation that is performed during the first startup and when the envent webGLcontextRestored is received is included in this
     setupShaders();
     setupBuffers();
+    setupLights();
     setupTextures();
     gl.enable(gl.DEPTH_TEST);
 
-    // Initalise some variables for the moving box
+    // Initalise some variables for the satillite
     pwgl.x = 0.0;
     pwgl.y = 0.0;
     pwgl.z = 0.0;
@@ -753,7 +855,7 @@ function myMouseMove(ev) {
     if (drag == 0) return;
 
     if (ev.shiftKey) {
-        transZ = (ev.clientY - yOffs) / 10;
+        transx = (ev.clientX - xOffs) / 10;
         //zRot = (xOffs - ev.ClientX) * .3;
     } else if (ev.altKey) {
         transY = -(ev.clientY - yOffs) / 10;
