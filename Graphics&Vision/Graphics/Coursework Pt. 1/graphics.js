@@ -503,7 +503,7 @@ function textureFinishedLoading(image, texture) {
 }
 
 function setupLights() {
-    gl.uniform3fv(pwgl.uniformLightPositionLoc, [10.0, 10.0, 10.0]);
+    gl.uniform3fv(pwgl.uniformLightPositionLoc, [50.0, 10.0, 10.0]);
     gl.uniform3fv(pwgl.uniformAmbientLightColorLoc, [0.2, 0.2, 0.2]);
     gl.uniform3fv(pwgl.uniformDiffuseLightColorLoc, [0.7, 0.7, 0.7]);
     gl.uniform3fv(pwgl.uniformSpecularLightColorLoc, [0.8, 0.8, 0.8]);
@@ -692,7 +692,8 @@ function draw() {
         mat4.rotateY(pwgl.modelViewMatrix, -pwgl.earthAngle, pwgl.modelViewMatrix);
 
         uploadModelViewMatrixToShader();
-        uploadNormalMatrixToShader();
+        //uploadProjectionMatrixToShader();
+        //uploadNormalMatrixToShader();
 
         //Draw earth
         drawSphere(pwgl.earthTexture);
@@ -709,6 +710,7 @@ function draw() {
         mat4.rotateY(pwgl.modelViewMatrix, -pwgl.satAngle, pwgl.modelViewMatrix);
 
         uploadModelViewMatrixToShader();
+        uploadProjectionMatrixToShader();
         uploadNormalMatrixToShader();
 
         // Draw satillite on top of the earth
