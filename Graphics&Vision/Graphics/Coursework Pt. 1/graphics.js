@@ -279,8 +279,8 @@ function setupCubeBuffers() {
 }
 
 function setupSphereBuffers() {
-    let totalLatRings = 50;
-    let totalLongRings = 50;
+    let totalLatRings = 100;
+    let totalLongRings = 100;
     let radius = 1;
     let sphereVertexPosition = [];
     let sphereTextureCoordinates = [];
@@ -503,7 +503,7 @@ function textureFinishedLoading(image, texture) {
 }
 
 function setupLights() {
-    gl.uniform3fv(pwgl.uniformLightPositionLoc, [50.0, 10.0, 10.0]);
+    gl.uniform3fv(pwgl.uniformLightPositionLoc, [500.0, 500.0, 0.0]);
     gl.uniform3fv(pwgl.uniformAmbientLightColorLoc, [0.2, 0.2, 0.2]);
     gl.uniform3fv(pwgl.uniformDiffuseLightColorLoc, [0.7, 0.7, 0.7]);
     gl.uniform3fv(pwgl.uniformSpecularLightColorLoc, [0.8, 0.8, 0.8]);
@@ -604,13 +604,13 @@ function drawDish(texture, r, g, b, a) {
     gl.drawElements(gl.TRIANGLES, pwgl.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
 }
 
-function drawSatillite(r, g, b, a) {
+function drawSatillite() {
     //Now draw the scaled cube (satillite body)
     pushModelViewMatrix();
-    mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
-    mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
-    uploadModelViewMatrixToShader();
-    drawCube(255, 215, 0, 1);
+        mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
+        mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        drawCube(255, 215, 0, 1);
     popModelViewMatrix();
 
     // Draw solar panels
@@ -692,8 +692,8 @@ function draw() {
         mat4.rotateY(pwgl.modelViewMatrix, -pwgl.earthAngle, pwgl.modelViewMatrix);
 
         uploadModelViewMatrixToShader();
-        //uploadProjectionMatrixToShader();
-        //uploadNormalMatrixToShader();
+        uploadProjectionMatrixToShader();
+        uploadNormalMatrixToShader();
 
         //Draw earth
         drawSphere(pwgl.earthTexture);
@@ -766,7 +766,7 @@ function init() {
     pwgl.minimumOrbitSpeed = 0.1;
     pwgl.satAngle = 0.0;
 
-    pwgl.earthRotationSpeed = 0.5;
+    pwgl.earthRotationSpeed = 0.3;
     pwgl.earthAngle = 0.0;
 
     //Init animation variables
