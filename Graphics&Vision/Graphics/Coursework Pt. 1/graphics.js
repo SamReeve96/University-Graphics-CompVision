@@ -191,41 +191,41 @@ function setupCubeBuffers() {
 
     // //Think about how the coordinates are assigned. Ref. vertex coords.
     var cubeTextureCoordinates = [
-        //Front face
+        //left face yellow
         0.0, 0.0, //v0
-        1.0, 0.0, //v1
-        1.0, 1.0, //v2
-        0.0, 1.0, //v3
+        0.0, 0.5, //v1
+        0.25, 0.5, //v2
+        0.25, 0.0, //v3
 
-        // Back face
-        0.0, 1.0, //v4
-        1.0, 1.0, //v5
-        1.0, 0.0, //v6
-        0.0, 0.0, //v7
+        // right face red
+        0.25, 0.5, //v4
+        0.25, 1, //v5
+        0.5, 1, //v6
+        0.5, 0.5, //v7
 
-        // Left face
-        0.0, 1.0, //v1
-        1.0, 1.0, //v5
-        1.0, 0.0, //v6
-        0.0, 0.0, //v2
+        // front face black
+        0.0, 0.5, //v1
+        0.0, 1, //v5
+        0.25, 1, //v6
+        0.25, 0.5, //v2
 
-        // Right face
-        0.0, 1.0, //v0
-        1.0, 1.0, //v3
-        1.0, 0.0, //v7
-        0.0, 0.0, //v4
+        // back purple
+        0.5, 0.5, //v0
+        0.5, 1, //v3
+        0.75, 1, //v7
+        0.75, 0.5, //v4
 
-        // Top face
-        0.0, 1.0, //v0
-        1.0, 1.0, //v4
-        1.0, 0.0, //v5
-        0.0, 0.0, //v1
+        // Top face green
+        0.25, 0.0, //v0
+        0.25, 0.5, //v4
+        0.5, 0.5, //v5
+        0.5, 0.0, //v1
 
-        // Bottom face
-        0.0, 1.0, //v3
-        1.0, 1.0, //v7
-        1.0, 0.0, //v6
-        0.0, 0.0, //v2
+        // Bottom face teal
+        0.5, 0.0, //v3
+        0.5, 0.5, //v7
+        0.75, 0.5, //v6
+        0.75, 0.0, //v2
     ];
 
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeTextureCoordinates), gl.STATIC_DRAW);
@@ -473,6 +473,10 @@ function setupTextures() {
     //Texture for the earth
     pwgl.earthTexture = gl.createTexture();
     loadImageForTexture('earth.jpg', pwgl.earthTexture);
+
+    pwgl.satilliteTexture = gl.createTexture();
+    loadImageForTexture('satillite.png', pwgl.satilliteTexture)
+    //loadImageForTexture('sattest.png', pwgl.satilliteTexture)
 }
 
 function loadImageForTexture(url, texture) {
@@ -492,15 +496,33 @@ function textureFinishedLoading(image, texture) {
 
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
-    gl.generateMipmap(gl.TEXTURE_2D);
+    //From MDN
+    // WebGL1 has different requirements for power of 2 images
+    // vs non power of 2 images so check if the image is a
+    // power of 2 in both dimensions.
+    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
+        // Yes, it's a power of 2. Generate mips.
+        gl.generateMipmap(gl.TEXTURE_2D);
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+     } else {
+        // No, it's not a power of 2. Turn off mips and set
+        // wrapping to clamp to edge
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+     }
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
     gl.bindTexture(gl.TEXTURE_2D, null);
 }
+
+function isPowerOf2(value) {
+    return (value & (value - 1)) == 0;
+  }
 
 function setupLights() {
     gl.uniform3fv(pwgl.uniformLightPositionLoc, [500.0, 866.66, 0.0]);
@@ -525,7 +547,7 @@ function uploadProjectionMatrixToShader() {
 }
 
 //Draw a cube with a fixed color on one side (black)
-function drawCube(r, g, b, a) {
+function drawCube(texture, r, g, b, a) {
     // Disable vertex attrib array and use constant color for the cube.
     //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
 
@@ -538,13 +560,16 @@ function drawCube(r, g, b, a) {
     gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexTextureCoordinateBuffer);
     gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
 
-    var colourTex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, colourTex);
-    var colourPixel = new Uint8Array([r, g, b, a]);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, colourPixel);
 
-    //gl.activeTexture(gl.TEXTURE0);
-    //gl.bindTexture(gl.TEXTURE_2D, texture);
+    if (texture !== undefined){
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+    } else {
+        var colourTex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, colourTex);
+        var colourPixel = new Uint8Array([r, g, b, a]);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, colourPixel);
+    }
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.cubeVertexIndexBuffer);
     gl.drawElements(gl.TRIANGLES, pwgl.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
@@ -610,7 +635,7 @@ function drawSatillite() {
         mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
         mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
-        drawCube(255, 215, 0, 1);
+        drawCube(pwgl.satilliteTexture, 255, 215, 0, 1);
     popModelViewMatrix();
 
     // Draw solar panels
@@ -619,7 +644,7 @@ function drawSatillite() {
         mat4.translate(pwgl.modelViewMatrix, [0, 0, i * 5], pwgl.modelViewMatrix);
         mat4.scale(pwgl.modelViewMatrix, [1, 0.0, 2], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
-        drawCube(129, 212, 250 ,1);
+        drawCube(undefined, 129, 212, 250 ,1);
         popModelViewMatrix();
     }
 
@@ -629,13 +654,13 @@ function drawSatillite() {
         mat4.translate(pwgl.modelViewMatrix, [0, 0, i * 2.5], pwgl.modelViewMatrix);
         mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.5], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
-        drawCube(255, 215, 0, 1);
+        drawCube(undefined, 255, 215, 0, 1);
         popModelViewMatrix();
     }
 
     //Draw dish
     pushModelViewMatrix();
-        mat4.translate(pwgl.modelViewMatrix, [-6.5, 0.0, 0.0], pwgl.modelViewMatrix);
+        mat4.translate(pwgl.modelViewMatrix, [-6.9, 0.0, 0.0], pwgl.modelViewMatrix);
         mat4.scale(pwgl.modelViewMatrix, [4.0, 4.0, 4.0], pwgl.modelViewMatrix);
         mat4.rotateX(pwgl.modelViewMatrix, 80, pwgl.modelViewMatrix);
         mat4.rotateZ(pwgl.modelViewMatrix, 80, pwgl.modelViewMatrix);
@@ -648,7 +673,7 @@ function drawSatillite() {
         mat4.translate(pwgl.modelViewMatrix, [-2.5, 0, 0], pwgl.modelViewMatrix);
         mat4.scale(pwgl.modelViewMatrix, [0.4, 0.2, 0.2], pwgl.modelViewMatrix);
         uploadModelViewMatrixToShader();
-        drawCube(255, 215, 0, 1);
+        drawCube(undefined, 255, 215, 0, 1);
     popModelViewMatrix();
 }
 
@@ -762,7 +787,7 @@ function init() {
     
     pwgl.orbitRadius = 20.0;
     pwgl.minimumOrbitRadius = 17.0;
-    pwgl.orbitSpeed = 2.0;
+    pwgl.orbitSpeed = 0.3;
     pwgl.minimumOrbitSpeed = 0.1;
     pwgl.satAngle = 0.0;
 
