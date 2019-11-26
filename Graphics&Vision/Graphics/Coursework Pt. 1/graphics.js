@@ -759,7 +759,7 @@ function startup() {
     canvas.addEventListener('mousemove', myMouseMove, false);
     canvas.addEventListener('mousedown', myMouseDown, false);
     canvas.addEventListener('mouseup', myMouseUp, false);
-    canvas.addEventListener('mousewheel', wheelHandler, false);
+    canvas.addEventListener('wheel', wheelHandler, { passive: false });
     canvas.addEventListener('DOMmouseScroll', wheelHandler, false);
 
     gl = createGLContext(canvas);
@@ -898,9 +898,9 @@ function myMouseMove(ev) {
 
 function wheelHandler(ev) {
     if (ev.altKey) {
-        transZ = -ev.detail / 10;
+        transZ = -ev.deltaY / 10;
     } else {
-        transZ = ev.detail / 10;
+        transZ = ev.deltaY / 10;
     }
     //console.log("delta = " + ev.detail);
     ev.preventDefault();
