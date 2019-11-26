@@ -9,9 +9,10 @@ uniform vec3 uDiffuseLightColor;
 uniform vec3 uSpecularLightColor;
 uniform sampler2D uSampler;
 
-const float shininess = 64.0;
+const float shininess = 3.0;
 
 void main() {
+    
     //An alterenate way to calc (l)
     vec3 vectorToLightSource = normalize(uLightPosition - vPositionEye3);
 
