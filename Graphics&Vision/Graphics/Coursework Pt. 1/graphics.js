@@ -700,7 +700,7 @@ function draw() {
     }
 
     //console.log("1 xRot = " + xRot + "yRot = " + yRot + "t = " + trans1);
-    mat4.translate(pwgl.modelViewMatrix, [transZ, transY, transX], pwgl.modelViewMatrix);
+    mat4.translate(pwgl.modelViewMatrix, [transX, transY, transZ], pwgl.modelViewMatrix);
 
     mat4.rotateX(pwgl.modelViewMatrix, xRot / 50, pwgl.modelViewMatrix);
     mat4.rotateY(pwgl.modelViewMatrix, yRot / 50, pwgl.modelViewMatrix);
@@ -712,7 +712,7 @@ function draw() {
     uploadNormalMatrixToShader();
 
     pushModelViewMatrix();
-        pwgl.earthAngle = (currentTime - pwgl.animationStartTime) / 2000 * pwgl.earthRotationSpeed * Math.PI % (2 * Math.PI);
+        pwgl.earthAngle = -(currentTime - pwgl.animationStartTime) / 2000 * pwgl.earthRotationSpeed * Math.PI % (2 * Math.PI);
         mat4.scale(pwgl.modelViewMatrix, [10.0, 10.0, 10.0], pwgl.modelViewMatrix)
         mat4.rotateY(pwgl.modelViewMatrix, -pwgl.earthAngle, pwgl.modelViewMatrix);
 
@@ -727,7 +727,7 @@ function draw() {
 
     pushModelViewMatrix();
         //animate the satillite to orbit the earth
-        pwgl.satAngle = (currentTime - pwgl.animationStartTime) / 2000 * pwgl.orbitSpeed * Math.PI % (2 * Math.PI);
+        pwgl.satAngle = -(currentTime - pwgl.animationStartTime) / 2000 * pwgl.orbitSpeed * Math.PI % (2 * Math.PI);
         pwgl.x = Math.cos(pwgl.satAngle) * pwgl.orbitRadius;
         pwgl.z = Math.sin(pwgl.satAngle) * pwgl.orbitRadius;
 
@@ -769,19 +769,19 @@ function startup() {
 
     pwgl.fpsCounter = document.getElementById("fps");
 
-        // Initalise some variables for the satillite
-        pwgl.x = 0.0;
-        pwgl.y = 0.0;
-        pwgl.z = 0.0;
-        
-        pwgl.orbitRadius = 20.0;
-        pwgl.minimumOrbitRadius = 17.0;
-        pwgl.orbitSpeed = 0.3;
-        pwgl.minimumOrbitSpeed = 0.1;
-        pwgl.satAngle = 0.0;
+    // Initalise some variables for the satillite
+    pwgl.x = 0.0;
+    pwgl.y = 0.0;
+    pwgl.z = 0.0;
     
-        pwgl.earthRotationSpeed = 0.3;
-        pwgl.earthAngle = 0.0;
+    pwgl.orbitRadius = 20.0;
+    pwgl.minimumOrbitRadius = 17.0;
+    pwgl.orbitSpeed = 0.3;
+    pwgl.minimumOrbitSpeed = 0.1;
+    pwgl.satAngle = 0.0;
+
+    pwgl.earthRotationSpeed = 0.3;
+    pwgl.earthAngle = 0.0;
     
             //Init animation variables
     pwgl.animationStartTime = undefined;
@@ -805,16 +805,16 @@ function init() {
     mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
     mat4.identity(pwgl.modelViewMatrix);
     // Camera position(xyz), ???, ???, ???
-    mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
+    mat4.lookAt([0, 0, 50], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
 }
 
 function resizeCanvas() {
     gl = createGLContext(canvas);
 
     mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
-    mat4.identity(pwgl.modelViewMatrix);
-    // Camera position(xyz), ???, ???, ???
-    mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
+    // mat4.identity(pwgl.modelViewMatrix);
+    // // Camera position(xyz), ???, ???, ???
+    // mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
 }
 
 function handleKeyDown(event) {
@@ -882,7 +882,7 @@ function myMouseMove(ev) {
     if (drag == 0) return;
 
     if (ev.shiftKey) {
-        transX = -(ev.clientX - xOffs) / 10;
+        transX = +(ev.clientX - xOffs) / 10;
     } else if (ev.altKey) {
         transY = -(ev.clientY - yOffs) / 10;
     } else {
