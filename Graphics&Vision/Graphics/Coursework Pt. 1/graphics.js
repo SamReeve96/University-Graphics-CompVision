@@ -4,7 +4,7 @@ pwgl.ongoingImageLoads = [];
 var canvas;
 
 //Vars for translations and rotations
-var transY = transZ = 0;
+var transX = transY = transZ = 0;
 var xRot = yRot = xOffs = yOffs = drag = 0;
 pwgl.listOfPressedKeys = [];
 
@@ -700,12 +700,12 @@ function draw() {
     }
 
     //console.log("1 xRot = " + xRot + "yRot = " + yRot + "t = " + trans1);
-    mat4.translate(pwgl.modelViewMatrix, [0.0, transY, transZ, pwgl.modelViewMatrix]);
+    mat4.translate(pwgl.modelViewMatrix, [transZ, transY, transX], pwgl.modelViewMatrix);
 
     mat4.rotateX(pwgl.modelViewMatrix, xRot / 50, pwgl.modelViewMatrix);
     mat4.rotateY(pwgl.modelViewMatrix, yRot / 50, pwgl.modelViewMatrix);
     //mat4.rotateZ(pwgl.modelViewMatrix, zRot/50, pwgl.modelViewMatrix);
-    yRot = xRot = zRot = transY = transZ = 0;
+    yRot = xRot = zRot = transX = transY = transZ = 0;
 
     uploadModelViewMatrixToShader();
     uploadProjectionMatrixToShader();
@@ -769,6 +769,25 @@ function startup() {
 
     pwgl.fpsCounter = document.getElementById("fps");
 
+        // Initalise some variables for the satillite
+        pwgl.x = 0.0;
+        pwgl.y = 0.0;
+        pwgl.z = 0.0;
+        
+        pwgl.orbitRadius = 20.0;
+        pwgl.minimumOrbitRadius = 17.0;
+        pwgl.orbitSpeed = 0.3;
+        pwgl.minimumOrbitSpeed = 0.1;
+        pwgl.satAngle = 0.0;
+    
+        pwgl.earthRotationSpeed = 0.3;
+        pwgl.earthAngle = 0.0;
+    
+            //Init animation variables
+    pwgl.animationStartTime = undefined;
+    pwgl.nbrOfFramesForFPS = 0;
+    pwgl.previousFrameTimeStamp = Date.now();
+
     draw();
 }
 
@@ -779,25 +798,6 @@ function init() {
     setupLights();
     setupTextures();
     gl.enable(gl.DEPTH_TEST);
-
-    // Initalise some variables for the satillite
-    pwgl.x = 0.0;
-    pwgl.y = 0.0;
-    pwgl.z = 0.0;
-    
-    pwgl.orbitRadius = 20.0;
-    pwgl.minimumOrbitRadius = 17.0;
-    pwgl.orbitSpeed = 0.3;
-    pwgl.minimumOrbitSpeed = 0.1;
-    pwgl.satAngle = 0.0;
-
-    pwgl.earthRotationSpeed = 0.3;
-    pwgl.earthAngle = 0.0;
-
-    //Init animation variables
-    pwgl.animationStartTime = undefined;
-    pwgl.nbrOfFramesForFPS = 0;
-    pwgl.previousFrameTimeStamp = Date.now();
 
     // mat4.perspective(60, gl.viewportWidth/gl.viewportHeight, 1, 100.0, pwgl.projectionMatrix);
     // mat4.identity(pwgl.modelViewMatrix);
@@ -882,8 +882,7 @@ function myMouseMove(ev) {
     if (drag == 0) return;
 
     if (ev.shiftKey) {
-        transx = (ev.clientX - xOffs) / 10;
-        //zRot = (xOffs - ev.ClientX) * .3;
+        transX = -(ev.clientX - xOffs) / 10;
     } else if (ev.altKey) {
         transY = -(ev.clientY - yOffs) / 10;
     } else {
@@ -897,11 +896,7 @@ function myMouseMove(ev) {
 }
 
 function wheelHandler(ev) {
-    if (ev.altKey) {
-        transZ = -ev.deltaY / 10;
-    } else {
-        transZ = ev.deltaY / 10;
-    }
+    transZ = ev.deltaY / 10;
     //console.log("delta = " + ev.detail);
     ev.preventDefault();
 }
