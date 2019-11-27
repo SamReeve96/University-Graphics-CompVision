@@ -64,9 +64,9 @@ function loadShaderFromDOM(id) {
     let shader;
 
     if (shaderScript.type == "x-shader/x-fragment") {
-        shader = glContext.createShader (glContext.FRAGMENT_SHADER);
+        shader = glContext.createShader(glContext.FRAGMENT_SHADER);
     } else if (shaderScript.type == "x-shader/x-vertex") {
-        shader = glContext.createShader (glContext.VERTEX_SHADER);
+        shader = glContext.createShader(glContext.VERTEX_SHADER);
     } else {
         return null;
     }
@@ -75,7 +75,7 @@ function loadShaderFromDOM(id) {
     glContext.compileShader(shader);
 
     if (!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS)) {
-        alert (glContext.getShaderInfoLog(shader));
+        alert(glContext.getShaderInfoLog(shader));
         return null;
     }
     return shader;
@@ -126,7 +126,7 @@ function setupShaders() {
 function setupCubeBuffers() {
     //Create position buffer
     glProperties.cubeVertexPositionBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.cubeVertexPositionBuffer);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.cubeVertexPositionBuffer);
 
     //Setup the cube to be a 1x1x1 size, if an instance of a cube needs to be bigger or smaller, it should be tranformed
     var cubeVertexPosition = [
@@ -168,13 +168,13 @@ function setupCubeBuffers() {
         -1.0, -1.0, 1.0, //v23
     ];
 
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(cubeVertexPosition), glContext.STATIC_DRAW);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(cubeVertexPosition), glContext.STATIC_DRAW);
 
     glProperties.CUBE_VERTEX_POS_BUF_ITEM_SIZE = 3;
 
     //Create indices buffer
     glProperties.cubeVertexIndexBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ELEMENT_ARRAY_BUFFER, glProperties.cubeVertexIndexBuffer);
+    glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, glProperties.cubeVertexIndexBuffer);
 
     var cubeVertexIndices = [
         0, 1, 2, 0, 2, 3, // Front face
@@ -185,12 +185,12 @@ function setupCubeBuffers() {
         20, 22, 21, 20, 23, 22 // Bottom face
     ];
 
-    glContext.bufferData (glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), glContext.STATIC_DRAW);
+    glContext.bufferData(glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), glContext.STATIC_DRAW);
     glProperties.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS = 36;
 
     // Create texture coordinates buffer
     glProperties.cubeVertexTextureCoordinateBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.cubeVertexTextureCoordinateBuffer);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.cubeVertexTextureCoordinateBuffer);
 
     var cubeTextureCoordinates = [
         //Yellow (when using sattest.png)
@@ -230,12 +230,12 @@ function setupCubeBuffers() {
         0.75, 0.0, //v2
     ];
 
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(cubeTextureCoordinates), glContext.STATIC_DRAW);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(cubeTextureCoordinates), glContext.STATIC_DRAW);
     glProperties.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
 
     // Create normals buffer
     glProperties.cubeVertexNormalBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.cubeVertexNormalBuffer);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.cubeVertexNormalBuffer);
     var cubeVertexNormals = [
         // Front face
         0.0, 0.0, 1.0, //v0
@@ -274,7 +274,7 @@ function setupCubeBuffers() {
         0.0, -1.0, 0.0, //v2
     ];
 
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(cubeVertexNormals), glContext.STATIC_DRAW);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(cubeVertexNormals), glContext.STATIC_DRAW);
     glProperties.CUBE_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
 }
 
@@ -292,26 +292,26 @@ function setupSphereBuffers() {
     let sphereVertexPosition = [];
     let sphereTextureCoordinates = [];
     let sphereVertexNormals = [];
-    
+
     for (let latRing = 0; latRing <= totalLatRings; ++latRing) {
         for (let longRing = 0; longRing <= totalLongRings; ++longRing) {
             let theta = (latRing * Math.PI / totalLatRings) // if you want a semi sphere * 0.5;
-            
+
             let sinTheta = Math.sin(theta);
             let cosTheta = Math.cos(theta);
             let phi = longRing * 2 * Math.PI / totalLongRings;
-            
+
             let x = Math.cos(phi) * sinTheta;
             let y = cosTheta;
             let z = Math.sin(phi) * sinTheta;
-            
+
             sphereVertexPosition.push(radius * x);
             sphereVertexPosition.push(radius * y);
             sphereVertexPosition.push(radius * z);
-            
+
             sphereTextureCoordinates.push(1 - (longRing / totalLongRings));
             sphereTextureCoordinates.push(1 - (latRing / totalLatRings));
-            
+
             sphereVertexNormals.push(x);
             sphereVertexNormals.push(y);
             sphereVertexNormals.push(z);
@@ -320,20 +320,20 @@ function setupSphereBuffers() {
 
     // Create position buffer
     glProperties.sphereVertexPositionBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.sphereVertexPositionBuffer);
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(sphereVertexPosition), glContext.STATIC_DRAW);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.sphereVertexPositionBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(sphereVertexPosition), glContext.STATIC_DRAW);
     glProperties.SPHERE_VERTEX_POS_BUF_ITEM_SIZE = 3;
-     
+
     // Create texture coordinates buffer
     glProperties.sphereVertexTextureCoordinateBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.sphereVertexTextureCoordinateBuffer);
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(sphereTextureCoordinates), glContext.STATIC_DRAW);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.sphereVertexTextureCoordinateBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(sphereTextureCoordinates), glContext.STATIC_DRAW);
     glProperties.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
 
     // Create normals buffer
     glProperties.sphereVertexNormalBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.sphereVertexNormalBuffer);
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(sphereVertexNormals), glContext.STATIC_DRAW);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.sphereVertexNormalBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(sphereVertexNormals), glContext.STATIC_DRAW);
     glProperties.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
 
     // Calculate sphere indices
@@ -360,8 +360,8 @@ function setupSphereBuffers() {
 
     // Create index buffer
     glProperties.sphereVertexIndexBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ELEMENT_ARRAY_BUFFER, glProperties.sphereVertexIndexBuffer);
-    glContext.bufferData (glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), glContext.STATIC_DRAW);
+    glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, glProperties.sphereVertexIndexBuffer);
+    glContext.bufferData(glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), glContext.STATIC_DRAW);
     glProperties.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS = sphereIndices.length;
 
 }
@@ -408,21 +408,21 @@ function setupDishBuffers() {
 
     // Create position buffer
     glProperties.dishVertexPositionBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.dishVertexPositionBuffer);
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(dishVertexPosition), glContext.STATIC_DRAW);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.dishVertexPositionBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(dishVertexPosition), glContext.STATIC_DRAW);
     glProperties.DISH_VERTEX_POS_BUF_ITEM_SIZE = 3;
 
     // Create texture coordinate buffer
     glProperties.dishVertexTextureCoordinateBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.dishVertexTextureCoordinateBuffer);
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(dishTextureCoordinates), glContext.STATIC_DRAW);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.dishVertexTextureCoordinateBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(dishTextureCoordinates), glContext.STATIC_DRAW);
     glProperties.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
     glProperties.DISH_VERTEX_TEX_COORD_BUF_NUM_ITEMS = dishTextureCoordinates.length / glProperties.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE;
 
     // Create normals buffer
     glProperties.dishVertexNormalBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.dishVertexNormalBuffer);
-    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(dishVertexNormals), glContext.STATIC_DRAW);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.dishVertexNormalBuffer);
+    glContext.bufferData(glContext.ARRAY_BUFFER, new Float32Array(dishVertexNormals), glContext.STATIC_DRAW);
     glProperties.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
     glProperties.DISH_VERTEX_NORMAL_BUF_NUM_ITEMS = dishVertexNormals.length / glProperties.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE;
 
@@ -450,8 +450,8 @@ function setupDishBuffers() {
 
     // Create dish index buffer
     glProperties.dishVertexIndexBuffer = glContext.createBuffer();
-    glContext.bindBuffer (glContext.ELEMENT_ARRAY_BUFFER, glProperties.dishVertexIndexBuffer);
-    glContext.bufferData (glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(dishIndices), glContext.STATIC_DRAW);
+    glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, glProperties.dishVertexIndexBuffer);
+    glContext.bufferData(glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(dishIndices), glContext.STATIC_DRAW);
     glProperties.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
     glProperties.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_NUM_ITEMS = dishIndices.length;
 }
@@ -503,28 +503,28 @@ function loadImageForTexture(url, texture) {
 
 // Once the texture is finished loading, setup texture properties
 function textureFinishedLoading(image, texture) {
-    glContext.bindTexture (glContext.TEXTURE_2D, texture);
-    glContext.pixelStorei (glContext.UNPACK_FLIP_Y_WEBGL, true);
-    glContext.texImage2D (glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
+    glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, true);
+    glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 
     // Check if the image being used as a texture has dimiensions that are a power of two and setup the texture accordingly
     if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
         // Is a power of 2, generate mipmap
-        glContext.generateMipmap (glContext.TEXTURE_2D);
+        glContext.generateMipmap(glContext.TEXTURE_2D);
 
-        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
-        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+        glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
+        glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
 
-        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.MIRRORED_REPEAT);
-        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.MIRRORED_REPEAT);
+        glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.MIRRORED_REPEAT);
+        glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.MIRRORED_REPEAT);
     } else {
         // Not a power of 2. Turn off mips and set wrapping to clamp to edge
-        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
-        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.CLAMP_TO_EDGE);
-        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+        glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
+        glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.CLAMP_TO_EDGE);
+        glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
     }
 
-    glContext.bindTexture (glContext.TEXTURE_2D, null);
+    glContext.bindTexture(glContext.TEXTURE_2D, null);
 }
 
 // Check if value given is a power of two
@@ -583,7 +583,7 @@ function drawCube(texture, r = 255, g = 0, b = 0, a = 1) {
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
     } else {
         let colourTex = glContext.createTexture();
-        glContext.bindTexture (glContext.TEXTURE_2D, colourTex);
+        glContext.bindTexture(glContext.TEXTURE_2D, colourTex);
         let colourPixel = new Uint8Array([r, g, b, a]);
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, colourPixel);
     }
@@ -611,7 +611,7 @@ function drawSphere(texture, r = 255, g = 0, b = 0, a = 1) {
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
     } else {
         let colourTex = glContext.createTexture();
-        glContext.bindTexture (glContext.TEXTURE_2D, colourTex);
+        glContext.bindTexture(glContext.TEXTURE_2D, colourTex);
         let colourPixel = new Uint8Array([r, g, b, a]);
         glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, colourPixel);
     }
@@ -682,7 +682,7 @@ function drawsatellite(texture, r = 255, g = 0, b = 0, a = 1) {
     mat4.rotateX(glProperties.modelViewMatrix, 80, glProperties.modelViewMatrix);
     mat4.rotateZ(glProperties.modelViewMatrix, 80, glProperties.modelViewMatrix);
     uploadModelViewMatrixToShader();
-    drawDish(undefined,  r, g, b, a);
+    drawDish(undefined, r, g, b, a);
     popModelViewMatrix();
 
     // Draw rod that attaches the dish to the satellite body
@@ -690,14 +690,14 @@ function drawsatellite(texture, r = 255, g = 0, b = 0, a = 1) {
     mat4.translate(glProperties.modelViewMatrix, [-2.5, 0, 0], glProperties.modelViewMatrix);
     mat4.scale(glProperties.modelViewMatrix, [0.4, 0.2, 0.2], glProperties.modelViewMatrix);
     uploadModelViewMatrixToShader();
-    drawCube(undefined,  r, g, b, a);
+    drawCube(undefined, r, g, b, a);
     popModelViewMatrix();
 }
 
 // Draw a frame of the scene
 function draw() {
     glContext.clearColor(0.0, 0.0, 0.0, 1);
-    glContext.clear (glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+    glContext.clear(glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
     glContext.viewport(0, 0, glContext.viewportWidth, glContext.viewportHeight);
     glProperties.requestId = requestAnimFrame(draw);
 
@@ -765,7 +765,7 @@ function draw() {
 // Start the animation once the body is loaded
 function startup() {
     canvas = document.getElementById("myGLCanvas");
-    
+
     //Add eventlisteners
     canvas.addEventListener('web glContextlost', handleContextLost, false);
     canvas.addEventListener('web glContextrestored', handleContextRestored, false);
@@ -779,7 +779,7 @@ function startup() {
     canvas.addEventListener('wheel', wheelHandler, {
         passive: false
     });
-    
+
     init();
     draw();
 }
@@ -787,7 +787,7 @@ function startup() {
 // Initialise variables for the program
 function init() {
     glContext = createGlContext(canvas);
-    
+
     //Satellite properties
     glProperties.satX = 0.0;
     glProperties.satY = 0.0;
@@ -813,7 +813,7 @@ function init() {
     setupBuffers();
     setupLights();
     setupTextures();
-    glContext.enable (glContext.DEPTH_TEST);
+    glContext.enable(glContext.DEPTH_TEST);
 
     //Setup camera properties
     mat4.perspective(camera.FOV, glContext.viewportWidth / glContext.viewportHeight, camera.near, camera.far, glProperties.projectionMatrix);
@@ -849,7 +849,7 @@ function handlePressedDownKeys() {
     if (glProperties.listOfPressedKeys[39]) {
         glProperties.orbitRadius += 0.1;
     }
-    
+
     //Arrow left - decrease orbit radius 
     if (glProperties.listOfPressedKeys[37]) {
         //minimum orbit to prevent clipping with earth
