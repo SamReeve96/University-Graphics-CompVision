@@ -1,27 +1,37 @@
-var gl;
-var pwgl = {};
-pwgl.ongoingImageLoads = [];
-var canvas;
+let glContext;
+let canvas;
 
-//Vars for translations and rotations
-var transX = transY = transZ = 0;
-var xRot = yRot = xOffs = yOffs = drag = 0;
-pwgl.listOfPressedKeys = [];
+let glProperties = {};
+glProperties.ongoingImageLoads = [];
+glProperties.listOfPressedKeys = [];
 
-function createGLContext(canvas) {
-    var names = ["webgl", "experimental-webgl"];
-    var context = null;
-    for (var i = 0; i < names.length; i++) {
+// interaction variables
+let transX = transY = transZ = xRot = yRot = xOffs = yOffs = drag = 0;
+
+// Camera constants
+const camera = {
+    FOV: 70,
+    near: 0.1,
+    far: 1000
+};
+
+// create the context for the webGL program, selecting whichever version
+function createGlContext(canvas) {
+    let names = ["webgl", "experimental-webgl"];
+    let context = null;
+    for (let i = 0; i < names.length; i++) {
         try {
             context = canvas.getContext(names[i]);
-        } catch (e) { }
+        } catch (e) {}
         if (context) {
             break;
         }
     }
 
+    // Set the size of the canvas to almost be the full size of the window
+    // Allowing space for the FPS counter 
+    // (used to inform the user if an error occured without opening dev tools)
     canvas.width = window.innerWidth;
-    //so the canvas isnt full screen and can show the fps counter
     canvas.height = window.innerHeight * 0.95;
 
     if (context) {
@@ -33,98 +43,92 @@ function createGLContext(canvas) {
     return context;
 }
 
+// Load the shader scripts from the DOM and compile to shader objects
 function loadShaderFromDOM(id) {
-    var shaderScript = document.getElementById(id);
+    let shaderScript = document.getElementById(id);
     if (!shaderScript) {
         return null;
     }
-    var shaderSource = "";
-    var currentChild = shaderScript.firstChild;
+
+    //Shader script
+    let shaderSource = "";
+    let currentChild = shaderScript.firstChild;
     while (currentChild) {
-        if (currentChild.nodeType == 3) { // 3 corresponds to TEXT_NODE
+        if (currentChild.nodeType == 3) {
             shaderSource += currentChild.textContent;
         }
         currentChild = currentChild.nextSibling;
     }
 
-    var shader;
+    //Shader object to return
+    let shader;
 
     if (shaderScript.type == "x-shader/x-fragment") {
-        shader = gl.createShader(gl.FRAGMENT_SHADER);
+        shader = glContext.createShader (glContext.FRAGMENT_SHADER);
     } else if (shaderScript.type == "x-shader/x-vertex") {
-        shader = gl.createShader(gl.VERTEX_SHADER);
+        shader = glContext.createShader (glContext.VERTEX_SHADER);
     } else {
         return null;
     }
 
-    gl.shaderSource(shader, shaderSource);
-    gl.compileShader(shader);
+    glContext.shaderSource(shader, shaderSource);
+    glContext.compileShader(shader);
 
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        alert(gl.getShaderInfoLog(shader));
+    if (!glContext.getShaderParameter(shader, glContext.COMPILE_STATUS)) {
+        alert (glContext.getShaderInfoLog(shader));
         return null;
     }
     return shader;
 }
 
+//Setup variables that will be used by the shader programs
 function setupShaders() {
     var vertexShader = loadShaderFromDOM("shader-vs");
     var fragmentShader = loadShaderFromDOM("shader-fs");
 
-    var shaderProgram = gl.createProgram();
-    gl.attachShader(shaderProgram, vertexShader);
-    gl.attachShader(shaderProgram, fragmentShader);
-    gl.linkProgram(shaderProgram);
+    var shaderProgram = glContext.createProgram();
+    glContext.attachShader(shaderProgram, vertexShader);
+    glContext.attachShader(shaderProgram, fragmentShader);
+    glContext.linkProgram(shaderProgram);
 
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+    if (!glContext.getProgramParameter(shaderProgram, glContext.LINK_STATUS)) {
         alert("Failed to setup shaders");
     }
 
-    gl.useProgram(shaderProgram);
+    glContext.useProgram(shaderProgram);
 
-    pwgl.vertexPositionAttributeLoc = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-    pwgl.uniformMVMatrixLoc = gl.getUniformLocation(shaderProgram, "uMVMatrix");
-    pwgl.uniformProjMatrixLoc = gl.getUniformLocation(shaderProgram, "uPMatrix");
+    glProperties.vertexPositionAttributeLoc = glContext.getAttribLocation(shaderProgram, "aVertexPosition");
+    glProperties.uniformMVMatrixLoc = glContext.getUniformLocation(shaderProgram, "uMVMatrix");
+    glProperties.uniformProjMatrixLoc = glContext.getUniformLocation(shaderProgram, "uPMatrix");
 
-    pwgl.vertexTextureAttributeLoc = gl.getAttribLocation(shaderProgram, "aTextureCoordinates");
-    pwgl.uniformSamplerLoc = gl.getUniformLocation(shaderProgram, "uSampler");
+    glProperties.vertexTextureAttributeLoc = glContext.getAttribLocation(shaderProgram, "aTextureCoordinates");
+    glProperties.uniformSamplerLoc = glContext.getUniformLocation(shaderProgram, "uSampler");
 
-    pwgl.uniformNormalMatrixLoc = gl.getUniformLocation(shaderProgram, "uNMatrix");
-    pwgl.vertexNormalAttributeLoc = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+    glProperties.uniformNormalMatrixLoc = glContext.getUniformLocation(shaderProgram, "uNMatrix");
+    glProperties.vertexNormalAttributeLoc = glContext.getAttribLocation(shaderProgram, "aVertexNormal");
 
-    pwgl.uniformLightPositionLoc = gl.getUniformLocation(shaderProgram, "uLightPosition");
-    pwgl.uniformAmbientLightColorLoc = gl.getUniformLocation(shaderProgram, "uAmbientLightColor");
-    pwgl.uniformDiffuseLightColorLoc = gl.getUniformLocation(shaderProgram, "uDiffuseLightColor");
-    pwgl.uniformSpecularLightColorLoc = gl.getUniformLocation(shaderProgram, "uSpecularLightColor");
+    glProperties.uniformLightPositionLoc = glContext.getUniformLocation(shaderProgram, "uLightPosition");
+    glProperties.uniformAmbientLightColorLoc = glContext.getUniformLocation(shaderProgram, "uAmbientLightColor");
+    glProperties.uniformDiffuseLightColorLoc = glContext.getUniformLocation(shaderProgram, "uDiffuseLightColor");
+    glProperties.uniformSpecularLightColorLoc = glContext.getUniformLocation(shaderProgram, "uSpecularLightColor");
 
-    gl.enableVertexAttribArray(pwgl.vertexNormalAttributeLoc);
-    gl.enableVertexAttribArray(pwgl.vertexPositionAttributeLoc);
-    gl.enableVertexAttribArray(pwgl.vertexTextureAttributeLoc);
+    glContext.enableVertexAttribArray(glProperties.vertexNormalAttributeLoc);
+    glContext.enableVertexAttribArray(glProperties.vertexPositionAttributeLoc);
+    glContext.enableVertexAttribArray(glProperties.vertexTextureAttributeLoc);
 
     //Initalise the matricies
-    pwgl.modelViewMatrix = mat4.create();
-    pwgl.projectionMatrix = mat4.create();
-    pwgl.modelViewMatrixStack = [];
-
+    glProperties.modelViewMatrix = mat4.create();
+    glProperties.projectionMatrix = mat4.create();
+    glProperties.modelViewMatrixStack = [];
 }
 
-function pushModelViewMatrix() {
-    var copyToPush = mat4.create(pwgl.modelViewMatrix);
-    pwgl.modelViewMatrixStack.push(copyToPush);
-}
-
-function popModelViewMatrix() {
-    if (pwgl.modelViewMatrixStack.length == 0) {
-        throw "Error popModelViewMatrix() - Stack was empty ";
-    }
-    pwgl.modelViewMatrix = pwgl.modelViewMatrixStack.pop();
-}
-
+//Setup Positions, indices, textures and normals for a cube object
 function setupCubeBuffers() {
-    pwgl.cubeVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexPositionBuffer);
+    //Create position buffer
+    glProperties.cubeVertexPositionBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.cubeVertexPositionBuffer);
 
-    //draw an illustration to understand the coordinates, if necessary
+    //Setup the cube to be a 1x1x1 size, if an instance of a cube needs to be bigger or smaller, it should be tranformed
     var cubeVertexPosition = [
 
         // Front face
@@ -164,168 +168,183 @@ function setupCubeBuffers() {
         -1.0, -1.0, 1.0, //v23
     ];
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeVertexPosition), gl.STATIC_DRAW);
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(cubeVertexPosition), glContext.STATIC_DRAW);
 
-    pwgl.CUBE_VERTEX_POS_BUF_ITEM_SIZE = 3;
-    pwgl.CUBE_VERTEX_POS_BUF_NUM_ITEMS = 24;
+    glProperties.CUBE_VERTEX_POS_BUF_ITEM_SIZE = 3;
 
-    pwgl.cubeVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.cubeVertexIndexBuffer);
+    //Create indices buffer
+    glProperties.cubeVertexIndexBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ELEMENT_ARRAY_BUFFER, glProperties.cubeVertexIndexBuffer);
 
     var cubeVertexIndices = [
-        0, 1, 2, 0, 2, 3,    // Front face
-        4, 6, 5, 4, 7, 6,    // Back face
-        8, 9, 10, 8, 10, 11,  // Left face
+        0, 1, 2, 0, 2, 3, // Front face
+        4, 6, 5, 4, 7, 6, // Back face
+        8, 9, 10, 8, 10, 11, // Left face
         12, 13, 14, 12, 14, 15, // Right face
         16, 17, 18, 16, 18, 19, // Top face
-        20, 22, 21, 20, 23, 22  // Bottom face
+        20, 22, 21, 20, 23, 22 // Bottom face
     ];
 
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
-    pwgl.CUBE_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
-    pwgl.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS = 36;
+    glContext.bufferData (glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), glContext.STATIC_DRAW);
+    glProperties.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS = 36;
 
-    // Setup buffer with texture coordinates
-    pwgl.cubeVertexTextureCoordinateBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexTextureCoordinateBuffer);
+    // Create texture coordinates buffer
+    glProperties.cubeVertexTextureCoordinateBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.cubeVertexTextureCoordinateBuffer);
 
-    // //Think about how the coordinates are assigned. Ref. vertex coords.
     var cubeTextureCoordinates = [
-        //left face yellow
+        //Yellow (when using sattest.png)
         0.0, 0.0, //v0
         0.0, 0.5, //v1
         0.25, 0.5, //v2
         0.25, 0.0, //v3
 
-        // right face red
+        // Red (when using sattest.png)
         0.25, 0.5, //v4
         0.25, 1, //v5
         0.5, 1, //v6
         0.5, 0.5, //v7
 
-        // front face black
+        // Black (when using sattest.png)
         0.0, 0.5, //v1
         0.0, 1, //v5
         0.25, 1, //v6
         0.25, 0.5, //v2
 
-        // back purple
+        // Purple (when using sattest.png)
         0.5, 0.5, //v0
         0.5, 1, //v3
         0.75, 1, //v7
         0.75, 0.5, //v4
 
-        // Top face green
+        // Green (when using sattest.png)
         0.25, 0.0, //v0
         0.25, 0.5, //v4
         0.5, 0.5, //v5
         0.5, 0.0, //v1
 
-        // Bottom face teal
+        // Teal/Cyan (when using sattest.png)
         0.5, 0.0, //v3
         0.5, 0.5, //v7
         0.75, 0.5, //v6
         0.75, 0.0, //v2
     ];
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeTextureCoordinates), gl.STATIC_DRAW);
-    pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
-    pwgl.CUBE_VERTEX_TEX_COORD_BUF_NUM_ITEMS = 24;
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(cubeTextureCoordinates), glContext.STATIC_DRAW);
+    glProperties.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
 
-    // Specify normals to be able to do lighting calculations
-    pwgl.cubeVertexNormalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexNormalBuffer);
+    // Create normals buffer
+    glProperties.cubeVertexNormalBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.cubeVertexNormalBuffer);
     var cubeVertexNormals = [
         // Front face
-        0.0,  0.0,  1.0, //v0
-        0.0,  0.0,  1.0, //v1
-        0.0,  0.0,  1.0, //v2
-        0.0,  0.0,  1.0, //v3
+        0.0, 0.0, 1.0, //v0
+        0.0, 0.0, 1.0, //v1
+        0.0, 0.0, 1.0, //v2
+        0.0, 0.0, 1.0, //v3
 
         // Back face
-        0.0,  0.0, -1.0, //v4
-        0.0,  0.0, -1.0, //v5
-        0.0,  0.0, -1.0, //v6
-        0.0,  0.0, -1.0, //v7
+        0.0, 0.0, -1.0, //v4
+        0.0, 0.0, -1.0, //v5
+        0.0, 0.0, -1.0, //v6
+        0.0, 0.0, -1.0, //v7
 
         // Left face
-        -1.0,  0.0,  0.0, //v1
-        -1.0,  0.0,  0.0, //v5
-        -1.0,  0.0,  0.0, //v6
-        -1.0,  0.0,  0.0, //v2
+        -1.0, 0.0, 0.0, //v1
+        -1.0, 0.0, 0.0, //v5
+        -1.0, 0.0, 0.0, //v6
+        -1.0, 0.0, 0.0, //v2
 
         // Right face
-        1.0,  0.0,  0.0, //0
-        1.0,  0.0,  0.0, //3
-        1.0,  0.0,  0.0, //7
-        1.0,  0.0,  0.0, //4
+        1.0, 0.0, 0.0, //0
+        1.0, 0.0, 0.0, //3
+        1.0, 0.0, 0.0, //7
+        1.0, 0.0, 0.0, //4
 
         // Top face
-        0.0,  1.0,  0.0, //v0
-        0.0,  1.0,  0.0, //v4
-        0.0,  1.0,  0.0, //v5
-        0.0,  1.0,  0.0, //v1
+        0.0, 1.0, 0.0, //v0
+        0.0, 1.0, 0.0, //v4
+        0.0, 1.0, 0.0, //v5
+        0.0, 1.0, 0.0, //v1
 
         // Bottom face
-        0.0, -1.0,  0.0, //v3
-        0.0, -1.0,  0.0, //v7
-        0.0, -1.0,  0.0, //v6
-        0.0, -1.0,  0.0, //v2
+        0.0, -1.0, 0.0, //v3
+        0.0, -1.0, 0.0, //v7
+        0.0, -1.0, 0.0, //v6
+        0.0, -1.0, 0.0, //v2
     ];
 
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(cubeVertexNormals), gl.STATIC_DRAW);
-    pwgl.CUBE_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
-    pwgl.CUBE_VERTEX_NORMAL_BUF_NUM_ITEMS = 24;
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(cubeVertexNormals), glContext.STATIC_DRAW);
+    glProperties.CUBE_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
 }
 
+// Setup Positions, indices, textures and normals for a sphere object
 function setupSphereBuffers() {
+    // Sphere latitude and longitude variables, can be increased for higher res sphere model
+    // at cost of performance or potentical out of memory crash
     let totalLatRings = 100;
     let totalLongRings = 100;
+
+    // Default sphere size, instances of spheres should be transformed to change size.
     let radius = 1;
+
+    // Calculate Sphere vertex positions, Texture coordinates and normals
     let sphereVertexPosition = [];
     let sphereTextureCoordinates = [];
-    let sphereIndices = [];
     let sphereVertexNormals = [];
-
-    //Create sphere position buffer
-    pwgl.sphereVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
-
-    pwgl.sphereVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
-
-    for (let latRing = 0; latRing <= totalLatRings; ++latRing) {    
+    
+    for (let latRing = 0; latRing <= totalLatRings; ++latRing) {
         for (let longRing = 0; longRing <= totalLongRings; ++longRing) {
             let theta = (latRing * Math.PI / totalLatRings) // if you want a semi sphere * 0.5;
-
+            
             let sinTheta = Math.sin(theta);
             let cosTheta = Math.cos(theta);
             let phi = longRing * 2 * Math.PI / totalLongRings;
-
+            
             let x = Math.cos(phi) * sinTheta;
             let y = cosTheta;
             let z = Math.sin(phi) * sinTheta;
-
+            
             sphereVertexPosition.push(radius * x);
             sphereVertexPosition.push(radius * y);
             sphereVertexPosition.push(radius * z);
-
+            
             sphereTextureCoordinates.push(1 - (longRing / totalLongRings));
             sphereTextureCoordinates.push(1 - (latRing / totalLatRings));
-
+            
             sphereVertexNormals.push(x);
             sphereVertexNormals.push(y);
             sphereVertexNormals.push(z);
         }
     }
 
-    // Calculate sphere indices.
+    // Create position buffer
+    glProperties.sphereVertexPositionBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.sphereVertexPositionBuffer);
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(sphereVertexPosition), glContext.STATIC_DRAW);
+    glProperties.SPHERE_VERTEX_POS_BUF_ITEM_SIZE = 3;
+     
+    // Create texture coordinates buffer
+    glProperties.sphereVertexTextureCoordinateBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.sphereVertexTextureCoordinateBuffer);
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(sphereTextureCoordinates), glContext.STATIC_DRAW);
+    glProperties.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
+
+    // Create normals buffer
+    glProperties.sphereVertexNormalBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.sphereVertexNormalBuffer);
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(sphereVertexNormals), glContext.STATIC_DRAW);
+    glProperties.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
+
+    // Calculate sphere indices
+    let sphereIndices = [];
+
     for (let latRing = 0; latRing < totalLatRings; ++latRing) {
         for (let longRing = 0; longRing < totalLongRings; ++longRing) {
-            let v1 = (latRing * (totalLongRings + 1)) + longRing;  //index of vi,j  
-            let v2 = v1 + totalLongRings + 1;                      //index of vi+1,j
-            let v3 = v1 + 1;                                  //index of vi,j+1 
-            let v4 = v2 + 1;                                  //index of vi+1,j+1
+            let v1 = (latRing * (totalLongRings + 1)) + longRing; //index of vi,j  
+            let v2 = v1 + totalLongRings + 1; //index of vi+1,j
+            let v3 = v1 + 1; //index of vi,j+1 
+            let v4 = v2 + 1; //index of vi+1,j+1
 
             //Triangle 1
             sphereIndices.push(v1);
@@ -339,56 +358,30 @@ function setupSphereBuffers() {
         }
     }
 
-    //Create sphere position buffer
-    pwgl.sphereVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereVertexPosition), gl.STATIC_DRAW);
-    pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE = 3;
-    pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_NUM_ITEMS = sphereVertexPosition.length / 3; //A check this, be see if a better way to be done
+    // Create index buffer
+    glProperties.sphereVertexIndexBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ELEMENT_ARRAY_BUFFER, glProperties.sphereVertexIndexBuffer);
+    glContext.bufferData (glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), glContext.STATIC_DRAW);
+    glProperties.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS = sphereIndices.length;
 
-    //Create sphere index buffer
-    pwgl.sphereVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sphereIndices), gl.STATIC_DRAW);
-    pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
-    pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS = sphereIndices.length;
-
-
-    ///For the texture make sure the last longitude virtal line meets it's self again
-    // texture coordinates are pushed when the positions are created
-    pwgl.sphereVertexTextureCoordinateBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexTextureCoordinateBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereTextureCoordinates), gl.STATIC_DRAW);
-    pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
-    pwgl.SPHERE_VERTEX_TEX_COORD_BUF_NUM_ITEMS = sphereTextureCoordinates.length/pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE;
-
-    //Add normals here
-    // Specify normals to be able to do lighting calculations
-    pwgl.sphereVertexNormalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexNormalBuffer);
-
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sphereVertexNormals), gl.STATIC_DRAW);
-    pwgl.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
-    pwgl.SPHERE_VERTEX_NORMAL_BUF_NUM_ITEMS = sphereVertexNormals.length / pwgl.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE;
 }
 
+// Setup Positions, indices, textures and normals for a dish object
 function setupDishBuffers() {
-    let totalLatRings = 50;
-    let totalLongRings = 50;
+    // Dish latitude and longitude variables, can be increased for higher res dish model
+    // at cost of performance or potentical out of memory crash
+    let totalLatRings = 100;
+    let totalLongRings = 100;
+
+    // Default dish size, instances of dishes should be transformed to change size.
     let radius = 1;
+
+    // Calculate Dish vertex positions, Texture coordinates and normals
     let dishVertexPosition = [];
     let dishTextureCoordinates = [];
-    let dishIndices = [];
     let dishVertexNormals = [];
 
-    //Create dish position buffer
-    pwgl.dishVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexPositionBuffer);
-
-    pwgl.dishVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.dishVertexIndexBuffer);
-
-    for (let latRing = 0; latRing <= totalLatRings; ++latRing) {    
+    for (let latRing = 0; latRing <= totalLatRings; ++latRing) {
         for (let longRing = 0; longRing <= totalLongRings; ++longRing) {
             let theta = (latRing * Math.PI / totalLatRings) * 0.5
 
@@ -413,13 +406,35 @@ function setupDishBuffers() {
         }
     }
 
+    // Create position buffer
+    glProperties.dishVertexPositionBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.dishVertexPositionBuffer);
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(dishVertexPosition), glContext.STATIC_DRAW);
+    glProperties.DISH_VERTEX_POS_BUF_ITEM_SIZE = 3;
+
+    // Create texture coordinate buffer
+    glProperties.dishVertexTextureCoordinateBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.dishVertexTextureCoordinateBuffer);
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(dishTextureCoordinates), glContext.STATIC_DRAW);
+    glProperties.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
+    glProperties.DISH_VERTEX_TEX_COORD_BUF_NUM_ITEMS = dishTextureCoordinates.length / glProperties.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE;
+
+    // Create normals buffer
+    glProperties.dishVertexNormalBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ARRAY_BUFFER, glProperties.dishVertexNormalBuffer);
+    glContext.bufferData (glContext.ARRAY_BUFFER, new Float32Array(dishVertexNormals), glContext.STATIC_DRAW);
+    glProperties.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
+    glProperties.DISH_VERTEX_NORMAL_BUF_NUM_ITEMS = dishVertexNormals.length / glProperties.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE;
+
     // Calculate dish indices.
+    let dishIndices = [];
+
     for (let latRing = 0; latRing < totalLatRings; ++latRing) {
         for (let longRing = 0; longRing < totalLongRings; ++longRing) {
-            let v1 = (latRing * (totalLongRings + 1)) + longRing;  //index of vi,j  
-            let v2 = v1 + totalLongRings + 1;                      //index of vi+1,j
-            let v3 = v1 + 1;                                  //index of vi,j+1 
-            let v4 = v2 + 1;                                  //index of vi+1,j+1
+            let v1 = (latRing * (totalLongRings + 1)) + longRing; //index of vi,j  
+            let v2 = v1 + totalLongRings + 1; //index of vi+1,j
+            let v3 = v1 + 1; //index of vi,j+1 
+            let v4 = v2 + 1; //index of vi+1,j+1
 
             //Triangle 1
             dishIndices.push(v1);
@@ -433,470 +448,480 @@ function setupDishBuffers() {
         }
     }
 
-    //Create dish position buffer
-    pwgl.dishVertexPositionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexPositionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dishVertexPosition), gl.STATIC_DRAW);
-    pwgl.dishVertexPositionBuffer.DISH_VERTEX_POS_BUF_ITEM_SIZE = 3;
-    pwgl.dishVertexPositionBuffer.DISH_VERTEX_POS_BUF_NUM_ITEMS = dishVertexPosition.length / 3; //A check this, be see if a better way to be done
+    // Create dish index buffer
+    glProperties.dishVertexIndexBuffer = glContext.createBuffer();
+    glContext.bindBuffer (glContext.ELEMENT_ARRAY_BUFFER, glProperties.dishVertexIndexBuffer);
+    glContext.bufferData (glContext.ELEMENT_ARRAY_BUFFER, new Uint16Array(dishIndices), glContext.STATIC_DRAW);
+    glProperties.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
+    glProperties.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_NUM_ITEMS = dishIndices.length;
+}
 
-    //Create dish index buffer
-    pwgl.dishVertexIndexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.dishVertexIndexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(dishIndices), gl.STATIC_DRAW);
-    pwgl.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_ITEM_SIZE = 1;
-    pwgl.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_NUM_ITEMS = dishIndices.length;
 
-    // texture coordinates are pushed when the positions are created
-    pwgl.dishVertexTextureCoordinateBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexTextureCoordinateBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dishTextureCoordinates), gl.STATIC_DRAW);
-    pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE = 2;
-    pwgl.DISH_VERTEX_TEX_COORD_BUF_NUM_ITEMS = dishTextureCoordinates.length/pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE;
-
-    // Specify normals to be able to do lighting calculations
-    pwgl.dishVertexNormalBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexNormalBuffer);
-
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dishVertexNormals), gl.STATIC_DRAW);
-    pwgl.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE = 3;
-    pwgl.DISH_VERTEX_NORMAL_BUF_NUM_ITEMS = dishVertexNormals.length / pwgl.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE;
- }
-
+//Setup all generic object buffers
 function setupBuffers() {
     setupCubeBuffers();
     setupSphereBuffers();
     setupDishBuffers();
 }
 
-function setupTextures() {
-    //Texture for the earth
-    pwgl.earthTexture = gl.createTexture();
-    loadImageForTexture('earth.jpg', pwgl.earthTexture);
 
-    pwgl.satilliteTexture = gl.createTexture();
-    loadImageForTexture('satillite.png', pwgl.satilliteTexture)
-    //loadImageForTexture('sattest.png', pwgl.satilliteTexture)
+//Setup Lighting properties
+function setupLights() {
+    glContext.uniform3fv(glProperties.uniformLightPositionLoc, [500, 866.66, 0.0]);
+    glContext.uniform3fv(glProperties.uniformAmbientLightColorLoc, [0.2, 0.2, 0.2]);
+    glContext.uniform3fv(glProperties.uniformDiffuseLightColorLoc, [0.7, 0.7, 0.7]);
+    glContext.uniform3fv(glProperties.uniformSpecularLightColorLoc, [0.8, 0.8, 0.8]);
 }
 
+// Create texture property variables
+function setupTextures() {
+    // Texture for the earth
+    glProperties.earthTexture = glContext.createTexture();
+    loadImageForTexture('earth.jpg', glProperties.earthTexture);
+
+    // Texture for satellite
+    glProperties.satelliteTexture = glContext.createTexture();
+    loadImageForTexture('satellite.png', glProperties.satelliteTexture)
+
+    /* Comment out the loadImageForTexture method above and uncomment the one below to see how each face of the cube
+       is correctly mapped against a test image where each cube face is a different colour */
+    //loadImageForTexture('sattest.png', glProperties.satelliteTexture)
+}
+
+// load image file for texture
 function loadImageForTexture(url, texture) {
     var image = new Image();
-    image.onload = function() {
-        pwgl.ongoingImageLoads.splice(pwgl.ongoingImageLoads.indexOf(image), 1);
-        //Splice adds/removes items to and from an array
+
+    // Add image to list of ongoing images being loaded, once loaded remove from the list
+    image.onload = function () {
+        glProperties.ongoingImageLoads.splice(glProperties.ongoingImageLoads.indexOf(image), 1);
         textureFinishedLoading(image, texture);
     }
-    pwgl.ongoingImageLoads.push(image);
+    glProperties.ongoingImageLoads.push(image);
     image.src = url;
 }
 
+// Once the texture is finished loading, setup texture properties
 function textureFinishedLoading(image, texture) {
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    glContext.bindTexture (glContext.TEXTURE_2D, texture);
+    glContext.pixelStorei (glContext.UNPACK_FLIP_Y_WEBGL, true);
+    glContext.texImage2D (glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-
-    //From MDN
-    // WebGL1 has different requirements for power of 2 images
-    // vs non power of 2 images so check if the image is a
-    // power of 2 in both dimensions.
+    // Check if the image being used as a texture has dimiensions that are a power of two and setup the texture accordingly
     if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-        // Yes, it's a power of 2. Generate mips.
-        gl.generateMipmap(gl.TEXTURE_2D);
+        // Is a power of 2, generate mipmap
+        glContext.generateMipmap (glContext.TEXTURE_2D);
 
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-     } else {
-        // No, it's not a power of 2. Turn off mips and set
-        // wrapping to clamp to edge
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-     }
+        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
+        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
 
-    gl.bindTexture(gl.TEXTURE_2D, null);
+        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.MIRRORED_REPEAT);
+        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.MIRRORED_REPEAT);
+    } else {
+        // Not a power of 2. Turn off mips and set wrapping to clamp to edge
+        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
+        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_T, glContext.CLAMP_TO_EDGE);
+        glContext.texParameteri (glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
+    }
+
+    glContext.bindTexture (glContext.TEXTURE_2D, null);
 }
 
+// Check if value given is a power of two
 function isPowerOf2(value) {
     return (value & (value - 1)) == 0;
-  }
-
-function setupLights() {
-    gl.uniform3fv(pwgl.uniformLightPositionLoc, [500.0, 866.66, 0.0]);
-    gl.uniform3fv(pwgl.uniformAmbientLightColorLoc, [0.2, 0.2, 0.2]);
-    gl.uniform3fv(pwgl.uniformDiffuseLightColorLoc, [0.7, 0.7, 0.7]);
-    gl.uniform3fv(pwgl.uniformSpecularLightColorLoc, [0.8, 0.8, 0.8]);
 }
 
+// Push a modelView altering matrix to the stack
+function pushModelViewMatrix() {
+    var copyToPush = mat4.create(glProperties.modelViewMatrix);
+    glProperties.modelViewMatrixStack.push(copyToPush);
+}
+
+// Pop a modelView altering matrix from the stack
+function popModelViewMatrix() {
+    if (glProperties.modelViewMatrixStack.length == 0) {
+        throw "Error popModelViewMatrix() - Stack was empty ";
+    }
+    glProperties.modelViewMatrix = glProperties.modelViewMatrixStack.pop();
+}
+
+// Upload modelview matrix values to the shdaer
+function uploadModelViewMatrixToShader() {
+    glContext.uniformMatrix4fv(glProperties.uniformMVMatrixLoc, false, glProperties.modelViewMatrix);
+}
+
+// Upload normal matrix values to the shader
 function uploadNormalMatrixToShader() {
     var normalMatrix = mat3.create();
-    mat4.toInverseMat3(pwgl.modelViewMatrix, normalMatrix);
+    mat4.toInverseMat3(glProperties.modelViewMatrix, normalMatrix);
     mat3.transpose(normalMatrix);
-    gl.uniformMatrix3fv(pwgl.uniformNormalMatrixLoc, false, normalMatrix);
+    glContext.uniformMatrix3fv(glProperties.uniformNormalMatrixLoc, false, normalMatrix);
 }
 
-function uploadModelViewMatrixToShader() {
-    gl.uniformMatrix4fv(pwgl.uniformMVMatrixLoc, false, pwgl.modelViewMatrix);
-}
-
+// Upload projection matrix values to the shader
 function uploadProjectionMatrixToShader() {
-    gl.uniformMatrix4fv(pwgl.uniformProjMatrixLoc, false, pwgl.projectionMatrix);
+    glContext.uniformMatrix4fv(glProperties.uniformProjMatrixLoc, false, glProperties.projectionMatrix);
 }
 
-//Draw a cube with a fixed color on one side (black)
-function drawCube(texture, r, g, b, a) {
-    // Disable vertex attrib array and use constant color for the cube.
-    //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
+// Draw a cube using the buffers
+function drawCube(texture, r = 255, g = 0, b = 0, a = 1) {
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.cubeVertexPositionBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexPositionAttributeLoc, glProperties.CUBE_VERTEX_POS_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexPositionBuffer);
-    gl.vertexAttribPointer(pwgl.vertexPositionAttributeLoc, pwgl.CUBE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.cubeVertexNormalBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexNormalAttributeLoc, glProperties.CUBE_VERTEX_NORMAL_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexNormalBuffer);
-    gl.vertexAttribPointer(pwgl.vertexNormalAttributeLoc, pwgl.CUBE_VERTEX_NORMAL_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.cubeVertexTextureCoordinateBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexTextureAttributeLoc, glProperties.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.cubeVertexTextureCoordinateBuffer);
-    gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.CUBE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
-
-
-    if (texture !== undefined){
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+    // If a texture is not defined, use RGBA values.
+    // If RGBA values are not provided by method call, use default red RGBA values 
+    // A red object then informs the user there is a texture issue, rather than something else where the object isnt drawn
+    if (texture !== undefined) {
+        glContext.activeTexture(glContext.TEXTURE0);
+        glContext.bindTexture(glContext.TEXTURE_2D, texture);
     } else {
-        var colourTex = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, colourTex);
-        var colourPixel = new Uint8Array([r, g, b, a]);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, colourPixel);
+        let colourTex = glContext.createTexture();
+        glContext.bindTexture (glContext.TEXTURE_2D, colourTex);
+        let colourPixel = new Uint8Array([r, g, b, a]);
+        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, colourPixel);
     }
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.cubeVertexIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, pwgl.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
+    glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, glProperties.cubeVertexIndexBuffer);
+    glContext.drawElements(glContext.TRIANGLES, glProperties.CUBE_VERTEX_INDEX_BUF_NUM_ITEMS, glContext.UNSIGNED_SHORT, 0);
 }
 
-function drawSphere(texture, r, g, b, a) {
-    //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
-    //gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
+// Draw a sphere using the buffers
+function drawSphere(texture, r = 255, g = 0, b = 0, a = 1) {
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.sphereVertexPositionBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexPositionAttributeLoc, glProperties.SPHERE_VERTEX_POS_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexPositionBuffer);
-    gl.vertexAttribPointer(pwgl.vertexPositionAttributeLoc, pwgl.sphereVertexPositionBuffer.SPHERE_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.sphereVertexNormalBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexNormalAttributeLoc, glProperties.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexNormalBuffer);
-    gl.vertexAttribPointer(pwgl.vertexNormalAttributeLoc, pwgl.SPHERE_VERTEX_NORMAL_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.sphereVertexTextureCoordinateBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexTextureAttributeLoc, glProperties.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.sphereVertexTextureCoordinateBuffer);
-    gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.SPHERE_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
-
-    if (texture !== undefined){
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+    // If a texture is not defined, use RGBA values.
+    // If RGBA values are not provided by method call, use default red RGBA values 
+    // A red object then informs the user there is a texture issue, rather than something else where the object isnt drawn
+    if (texture !== undefined) {
+        glContext.activeTexture(glContext.TEXTURE0);
+        glContext.bindTexture(glContext.TEXTURE_2D, texture);
     } else {
-        var colourTex = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, colourTex);
-        var colourPixel = new Uint8Array([r, g, b, a]);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, colourPixel);
+        let colourTex = glContext.createTexture();
+        glContext.bindTexture (glContext.TEXTURE_2D, colourTex);
+        let colourPixel = new Uint8Array([r, g, b, a]);
+        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, colourPixel);
     }
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.sphereVertexIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, pwgl.sphereVertexIndexBuffer.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
+    glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, glProperties.sphereVertexIndexBuffer);
+    glContext.drawElements(glContext.TRIANGLES, glProperties.SPHERE_VERTEX_INDEX_BUF_NUM_ITEMS, glContext.UNSIGNED_SHORT, 0);
 }
 
-function drawDish(texture, r, g, b, a) {
-    //gl.disableVertexAttribArray(pwgl.vertexColorAttribute);
-    //gl.vertexAttrib4f(pwgl.vertexColorAttribute, r, g, b, a);
+// Draw a sphere using the buffers
+function drawDish(texture, r = 255, g = 0, b = 0, a = 1) {
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.dishVertexPositionBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexPositionAttributeLoc, glProperties.DISH_VERTEX_POS_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexPositionBuffer);
-    gl.vertexAttribPointer(pwgl.vertexPositionAttributeLoc, pwgl.dishVertexPositionBuffer.DISH_VERTEX_POS_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.dishVertexNormalBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexNormalAttributeLoc, glProperties.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexNormalBuffer);
-    gl.vertexAttribPointer(pwgl.vertexNormalAttributeLoc, pwgl.DISH_VERTEX_NORMAL_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
+    glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.dishVertexTextureCoordinateBuffer);
+    glContext.vertexAttribPointer(glProperties.vertexTextureAttributeLoc, glProperties.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE, glContext.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, pwgl.dishVertexTextureCoordinateBuffer);
-    gl.vertexAttribPointer(pwgl.vertexTextureAttributeLoc, pwgl.DISH_VERTEX_TEX_COORD_BUF_ITEM_SIZE, gl.FLOAT, false, 0, 0);
-
-    if (texture !== undefined){
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+    // If a texture is not defined, use RGBA values.
+    // If RGBA values are not provided by method call, use default red RGBA values 
+    // A red object then informs the user there is a texture issue, rather than something else where the object isnt drawn
+    if (texture !== undefined) {
+        glContext.activeTexture(glContext.TEXTURE0);
+        glContext.bindTexture(glContext.TEXTURE_2D, texture);
     } else {
-        var colourTex = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, colourTex);
+        var colourTex = glContext.createTexture();
+        glContext.bindTexture(glContext.TEXTURE_2D, colourTex);
         var colourPixel = new Uint8Array([r, g, b, a]);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, colourPixel);
+        glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA, glContext.UNSIGNED_BYTE, colourPixel);
     }
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, pwgl.dishVertexIndexBuffer);
-    gl.drawElements(gl.TRIANGLES, pwgl.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_NUM_ITEMS, gl.UNSIGNED_SHORT, 0);
+    glContext.bindBuffer(glContext.ELEMENT_ARRAY_BUFFER, glProperties.dishVertexIndexBuffer);
+    glContext.drawElements(glContext.TRIANGLES, glProperties.dishVertexIndexBuffer.DISH_VERTEX_INDEX_BUF_NUM_ITEMS, glContext.UNSIGNED_SHORT, 0);
 }
 
-function drawSatillite() {
-    //Now draw the scaled cube (satillite body)
+// Draw a satellite using the basic shape methods already defined
+function drawsatellite(texture, r = 255, g = 0, b = 0, a = 1) {
+    // Draw the satellite body
     pushModelViewMatrix();
-        mat4.translate(pwgl.modelViewMatrix, [0.0, 0.0, 0.0], pwgl.modelViewMatrix);
-        mat4.scale(pwgl.modelViewMatrix, [2.0, 2.0, 2.0], pwgl.modelViewMatrix);
-        uploadModelViewMatrixToShader();
-        drawCube(pwgl.satilliteTexture, 255, 215, 0, 1);
+    mat4.translate(glProperties.modelViewMatrix, [0.0, 0.0, 0.0], glProperties.modelViewMatrix);
+    mat4.scale(glProperties.modelViewMatrix, [2.0, 2.0, 2.0], glProperties.modelViewMatrix);
+    uploadModelViewMatrixToShader();
+    drawCube(texture);
     popModelViewMatrix();
 
-    // Draw solar panels
+    // Draw two blue solar panels and two rods to attach the panels to the satellite body
     for (var i = -1; i <= 1; i += 2) {
         pushModelViewMatrix();
-        mat4.translate(pwgl.modelViewMatrix, [0, 0, i * 5], pwgl.modelViewMatrix);
-        mat4.scale(pwgl.modelViewMatrix, [1, 0.0, 2], pwgl.modelViewMatrix);
+        mat4.translate(glProperties.modelViewMatrix, [0, 0, i * 5], glProperties.modelViewMatrix);
+        mat4.scale(glProperties.modelViewMatrix, [1, 0.0, 2], glProperties.modelViewMatrix);
         uploadModelViewMatrixToShader();
-        drawCube(undefined, 129, 212, 250 ,1);
+        drawCube(undefined, 129, 212, 250, 1);
+        popModelViewMatrix();
+
+        pushModelViewMatrix();
+        mat4.translate(glProperties.modelViewMatrix, [0, 0, i * 2.5], glProperties.modelViewMatrix);
+        mat4.scale(glProperties.modelViewMatrix, [0.2, 0.2, 0.5], glProperties.modelViewMatrix);
+        uploadModelViewMatrixToShader();
+        drawCube(undefined, r, g, b, a);
         popModelViewMatrix();
     }
 
-    // Draw panel bars
-    for (var i = -1; i <= 1; i += 2) {
-        pushModelViewMatrix();
-        mat4.translate(pwgl.modelViewMatrix, [0, 0, i * 2.5], pwgl.modelViewMatrix);
-        mat4.scale(pwgl.modelViewMatrix, [0.2, 0.2, 0.5], pwgl.modelViewMatrix);
-        uploadModelViewMatrixToShader();
-        drawCube(undefined, 255, 215, 0, 1);
-        popModelViewMatrix();
-    }
-
-    //Draw dish
+    // Draw satellite dish
     pushModelViewMatrix();
-        mat4.translate(pwgl.modelViewMatrix, [-6.9, 0.0, 0.0], pwgl.modelViewMatrix);
-        mat4.scale(pwgl.modelViewMatrix, [4.0, 4.0, 4.0], pwgl.modelViewMatrix);
-        mat4.rotateX(pwgl.modelViewMatrix, 80, pwgl.modelViewMatrix);
-        mat4.rotateZ(pwgl.modelViewMatrix, 80, pwgl.modelViewMatrix);
-        uploadModelViewMatrixToShader();
-        drawDish(undefined, 255, 215, 0, 1);
+    mat4.translate(glProperties.modelViewMatrix, [-6.9, 0.0, 0.0], glProperties.modelViewMatrix);
+    mat4.scale(glProperties.modelViewMatrix, [4.0, 4.0, 4.0], glProperties.modelViewMatrix);
+    mat4.rotateX(glProperties.modelViewMatrix, 80, glProperties.modelViewMatrix);
+    mat4.rotateZ(glProperties.modelViewMatrix, 80, glProperties.modelViewMatrix);
+    uploadModelViewMatrixToShader();
+    drawDish(undefined,  r, g, b, a);
     popModelViewMatrix();
 
-    //draw rod that attaches to dish
-    pushModelViewMatrix(); //-17.6
-        mat4.translate(pwgl.modelViewMatrix, [-2.5, 0, 0], pwgl.modelViewMatrix);
-        mat4.scale(pwgl.modelViewMatrix, [0.4, 0.2, 0.2], pwgl.modelViewMatrix);
-        uploadModelViewMatrixToShader();
-        drawCube(undefined, 255, 215, 0, 1);
+    // Draw rod that attaches the dish to the satellite body
+    pushModelViewMatrix();
+    mat4.translate(glProperties.modelViewMatrix, [-2.5, 0, 0], glProperties.modelViewMatrix);
+    mat4.scale(glProperties.modelViewMatrix, [0.4, 0.2, 0.2], glProperties.modelViewMatrix);
+    uploadModelViewMatrixToShader();
+    drawCube(undefined,  r, g, b, a);
     popModelViewMatrix();
 }
 
+// Draw a frame of the scene
 function draw() {
-    pwgl.requestId = requestAnimFrame(draw);
+    glContext.clearColor(0.0, 0.0, 0.0, 1);
+    glContext.clear (glContext.COLOR_BUFFER_BIT | glContext.DEPTH_BUFFER_BIT);
+    glContext.viewport(0, 0, glContext.viewportWidth, glContext.viewportHeight);
+    glProperties.requestId = requestAnimFrame(draw);
 
-    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-    gl.clearColor(0.0, 0.0, 0.0, 1);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // React to any interactions made by the user
+    handlePressedDownKeys();
 
     var currentTime = Date.now();
 
-    handlePressedDownKeys();
-
-    //Update FPS if a second or more has passed since the last frame update
-    if (currentTime - pwgl.previousFrameTimeStamp >= 1000) {
-        pwgl.fpsCounter.innerHTML = pwgl.nbrOfFramesForFPS;
-        pwgl.nbrOfFramesForFPS = 0;
-        pwgl.previousFrameTimeStamp = currentTime;
+    if (glProperties.animationStartTime === undefined) {
+        glProperties.animationStartTime = currentTime;
     }
 
-    if (pwgl.animationStartTime === undefined) {
-        pwgl.animationStartTime = currentTime;
+    // Update FPS if a second or more has passed since the last frame update
+    if (currentTime - glProperties.previousFrameTimeStamp >= 1000) {
+        glProperties.fpsCounter.innerHTML = glProperties.nbrOfFramesForFPS;
+        glProperties.nbrOfFramesForFPS = 0;
+        glProperties.previousFrameTimeStamp = currentTime;
     }
 
-    //console.log("1 xRot = " + xRot + "yRot = " + yRot + "t = " + trans1);
-    mat4.translate(pwgl.modelViewMatrix, [transX, transY, transZ], pwgl.modelViewMatrix);
+    // Translate the models by the values transX, transY and transZ
+    mat4.translate(glProperties.modelViewMatrix, [transX, transY, transZ], glProperties.modelViewMatrix);
 
-    mat4.rotateX(pwgl.modelViewMatrix, xRot / 50, pwgl.modelViewMatrix);
-    mat4.rotateY(pwgl.modelViewMatrix, yRot / 50, pwgl.modelViewMatrix);
-    //mat4.rotateZ(pwgl.modelViewMatrix, zRot/50, pwgl.modelViewMatrix);
-    yRot = xRot = zRot = transX = transY = transZ = 0;
+    // Rotate model view in X or Y directions by xRot and yRot respectively
+    mat4.rotateX(glProperties.modelViewMatrix, xRot / 50, glProperties.modelViewMatrix);
+    mat4.rotateY(glProperties.modelViewMatrix, yRot / 50, glProperties.modelViewMatrix);
 
+    // Reset modifiers for next frame
+    yRot = xRot = transX = transY = transZ = 0;
+
+    // Draw the earth
+    pushModelViewMatrix();
+    // Calculate earth rotation position and rotate by however many degrees
+    glProperties.earthAngle = -(currentTime - glProperties.animationStartTime) / 2000 * glProperties.earthRotationSpeed * Math.PI % (2 * Math.PI);
+    mat4.rotateY(glProperties.modelViewMatrix, -glProperties.earthAngle, glProperties.modelViewMatrix);
+    // Scale earth x10 in all dimensions so it is radius 10
+    mat4.scale(glProperties.modelViewMatrix, [10.0, 10.0, 10.0], glProperties.modelViewMatrix)
+    // Upload various matrices to the shader
     uploadModelViewMatrixToShader();
     uploadProjectionMatrixToShader();
     uploadNormalMatrixToShader();
-
-    pushModelViewMatrix();
-        pwgl.earthAngle = -(currentTime - pwgl.animationStartTime) / 2000 * pwgl.earthRotationSpeed * Math.PI % (2 * Math.PI);
-        mat4.scale(pwgl.modelViewMatrix, [10.0, 10.0, 10.0], pwgl.modelViewMatrix)
-        mat4.rotateY(pwgl.modelViewMatrix, -pwgl.earthAngle, pwgl.modelViewMatrix);
-
-        uploadModelViewMatrixToShader();
-        uploadProjectionMatrixToShader();
-        uploadNormalMatrixToShader();
-
-        //Draw earth
-        drawSphere(pwgl.earthTexture);
+    // draw sphere with earth texture
+    drawSphere(glProperties.earthTexture);
     popModelViewMatrix();
 
-
+    // Draw satellite
     pushModelViewMatrix();
-        //animate the satillite to orbit the earth
-        pwgl.satAngle = -(currentTime - pwgl.animationStartTime) / 2000 * pwgl.orbitSpeed * Math.PI % (2 * Math.PI);
-        pwgl.x = Math.cos(pwgl.satAngle) * pwgl.orbitRadius;
-        pwgl.z = Math.sin(pwgl.satAngle) * pwgl.orbitRadius;
-
-        mat4.translate(pwgl.modelViewMatrix, [pwgl.x, pwgl.y, pwgl.z], pwgl.modelViewMatrix);
-        mat4.rotateY(pwgl.modelViewMatrix, -pwgl.satAngle, pwgl.modelViewMatrix);
-
-        uploadModelViewMatrixToShader();
-        uploadProjectionMatrixToShader();
-        uploadNormalMatrixToShader();
-
-        // Draw satillite on top of the earth
-        drawSatillite(0.81, 0.7, 0.23, 1.0);
+    //Calculate earth orbit position and rotate by however many degrees so the dish is still facing earth
+    glProperties.satAngle = -(currentTime - glProperties.animationStartTime) / 2000 * glProperties.orbitSpeed * Math.PI % (2 * Math.PI);
+    glProperties.satX = Math.cos(glProperties.satAngle) * glProperties.orbitRadius;
+    glProperties.satZ = Math.sin(glProperties.satAngle) * glProperties.orbitRadius;
+    mat4.translate(glProperties.modelViewMatrix, [glProperties.satX, glProperties.satY, glProperties.satZ], glProperties.modelViewMatrix);
+    mat4.rotateY(glProperties.modelViewMatrix, -glProperties.satAngle, glProperties.modelViewMatrix);
+    // Upload various matrices to the shader
+    uploadModelViewMatrixToShader();
+    uploadProjectionMatrixToShader();
+    uploadNormalMatrixToShader();
+    // Draw satellite with a textured body, and golden rgba dish & rods (Solar panels are always light blue)
+    drawsatellite(glProperties.satelliteTexture, 255, 215, 0, 1);
     popModelViewMatrix();
-    
+
     //update the number of frames rendered for that second
-    pwgl.nbrOfFramesForFPS++;
+    glProperties.nbrOfFramesForFPS++;
 }
 
+// Start the animation once the body is loaded
 function startup() {
     canvas = document.getElementById("myGLCanvas");
-    canvas = WebGLDebugUtils.makeLostContextSimulatingCanvas(canvas);
-
-    canvas.addEventListener('webglcontextlost', handleContextLost, false);
-    canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
-
+    
     //Add eventlisteners
+    canvas.addEventListener('web glContextlost', handleContextLost, false);
+    canvas.addEventListener('web glContextrestored', handleContextRestored, false);
+    window.addEventListener("resize", canvasResize, false);
     document.addEventListener('keydown', handleKeyDown, false);
     document.addEventListener('keyup', handleKeyup, false);
     canvas.addEventListener('mousemove', myMouseMove, false);
     canvas.addEventListener('mousedown', myMouseDown, false);
     canvas.addEventListener('mouseup', myMouseUp, false);
-    canvas.addEventListener('wheel', wheelHandler, { passive: false });
     canvas.addEventListener('DOMmouseScroll', wheelHandler, false);
-
-    gl = createGLContext(canvas);
+    canvas.addEventListener('wheel', wheelHandler, {
+        passive: false
+    });
+    
     init();
-
-    window.addEventListener("resize", resizeCanvas, false);
-
-    pwgl.fpsCounter = document.getElementById("fps");
-
-    // Initalise some variables for the satillite
-    pwgl.x = 0.0;
-    pwgl.y = 0.0;
-    pwgl.z = 0.0;
-    
-    pwgl.orbitRadius = 20.0;
-    pwgl.minimumOrbitRadius = 17.0;
-    pwgl.orbitSpeed = 0.3;
-    pwgl.minimumOrbitSpeed = 0.1;
-    pwgl.satAngle = 0.0;
-
-    pwgl.earthRotationSpeed = 0.3;
-    pwgl.earthAngle = 0.0;
-    
-            //Init animation variables
-    pwgl.animationStartTime = undefined;
-    pwgl.nbrOfFramesForFPS = 0;
-    pwgl.previousFrameTimeStamp = Date.now();
-
     draw();
 }
 
+// Initialise variables for the program
 function init() {
-    //the initialisation that is performed during the first startup and when the envent webGLcontextRestored is received is included in this
+    glContext = createGlContext(canvas);
+    
+    //Satellite properties
+    glProperties.satX = 0.0;
+    glProperties.satY = 0.0;
+    glProperties.satZ = 0.0;
+    glProperties.orbitRadius = 20.0;
+    glProperties.minimumOrbitRadius = 17.0;
+    glProperties.orbitSpeed = 0.3;
+    glProperties.minimumOrbitSpeed = 0.1;
+    glProperties.satAngle = 0.0;
+
+    // Earth properties
+    glProperties.earthRotationSpeed = 0.3;
+    glProperties.earthAngle = 0.0;
+
+    // Animation properties
+    glProperties.fpsCounter = document.getElementById("fps");
+    glProperties.animationStartTime = undefined;
+    glProperties.nbrOfFramesForFPS = 0;
+    glProperties.previousFrameTimeStamp = Date.now();
+
+    // Setup model attributes
     setupShaders();
     setupBuffers();
     setupLights();
     setupTextures();
-    gl.enable(gl.DEPTH_TEST);
+    glContext.enable (glContext.DEPTH_TEST);
 
-    // mat4.perspective(60, gl.viewportWidth/gl.viewportHeight, 1, 100.0, pwgl.projectionMatrix);
-    // mat4.identity(pwgl.modelViewMatrix);
-    // mat4.lookAt([8, 12, 8],[0,0,0],[0,1,0], pwgl.modelViewMatrix);
-    mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
-    mat4.identity(pwgl.modelViewMatrix);
-    // Camera position(xyz), ???, ???, ???
-    mat4.lookAt([0, 0, 50], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
+    //Setup camera properties
+    mat4.perspective(camera.FOV, glContext.viewportWidth / glContext.viewportHeight, camera.near, camera.far, glProperties.projectionMatrix);
+    mat4.identity(glProperties.modelViewMatrix);
+    mat4.lookAt([0, 0, 50], [0, 0, 0], [0, 1, 0], glProperties.modelViewMatrix);
 }
 
-function resizeCanvas() {
-    gl = createGLContext(canvas);
-
-    mat4.perspective(70, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pwgl.projectionMatrix);
-    // mat4.identity(pwgl.modelViewMatrix);
-    // // Camera position(xyz), ???, ???, ???
-    // mat4.lookAt([50, 0, 0], [0, 0, 0], [0, 1, 0], pwgl.modelViewMatrix);
+// Triggered when the window is resized, update the size of the canvas and the aspect ratio
+function canvasResize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight * 0.95;
+    glContext.viewportWidth = canvas.width;
+    glContext.viewportHeight = canvas.height;
+    mat4.perspective(camera.FOV, glContext.viewportWidth / glContext.viewportHeight, camera.near, camera.far, glProperties.projectionMatrix);
 }
 
-function handleKeyDown(event) {
-    pwgl.listOfPressedKeys[event.keyCode] = true;
-}
-
-function handleKeyup(event) {
-    pwgl.listOfPressedKeys[event.keyCode] = false;
-}
-
+// handle any key being pressed down
 function handlePressedDownKeys() {
-    if (pwgl.listOfPressedKeys[38]) {
-        //Arrow up - increase orbit speed
-        pwgl.orbitSpeed += 0.1;
+    //Arrow up - increase orbit speed
+    if (glProperties.listOfPressedKeys[38]) {
+        glProperties.orbitSpeed += 0.1;
     }
 
-    if (pwgl.listOfPressedKeys[40]) {
-        //Arrow down - decrease orbit speed
-        if (pwgl.orbitSpeed > pwgl.minimumOrbitSpeed) {
-            pwgl.orbitSpeed -= 0.1;
+    //Arrow down - decrease orbit speed
+    if (glProperties.listOfPressedKeys[40]) {
+        // minimun orbit speed to prevent stalling / reversing orbit directopn
+        if (glProperties.orbitSpeed > glProperties.minimumOrbitSpeed) {
+            glProperties.orbitSpeed -= 0.1;
         }
     }
 
-    if (pwgl.listOfPressedKeys[39]) {
-        //Arrow right - increase orbit radius
-        pwgl.orbitRadius += 0.1;
+    //Arrow right - increase orbit radius
+    if (glProperties.listOfPressedKeys[39]) {
+        glProperties.orbitRadius += 0.1;
     }
-
-    if (pwgl.listOfPressedKeys[37]) {
-        //Arrow left - decrease orbit radius //minimum orbit to prevent clipping with earth
-        if (pwgl.orbitRadius > pwgl.minimumOrbitRadius) {
-            pwgl.orbitRadius -= 0.1;
+    
+    //Arrow left - decrease orbit radius 
+    if (glProperties.listOfPressedKeys[37]) {
+        //minimum orbit to prevent clipping with earth
+        if (glProperties.orbitRadius > glProperties.minimumOrbitRadius) {
+            glProperties.orbitRadius -= 0.1;
         }
     }
 }
 
+// Handle webGL context being lost
 function handleContextLost(event) {
     event.preventDefault();
-    cancelRequestAnimFrame(pwgl.requestId);
+    cancelRequestAnimFrame(glProperties.requestId);
 
-    // Ignore all ongoing image loads by removing
-    // their onload handler
-    for (var i = 0; i < pwgl.ongoingImageLoads.length; i++) {
-        pwgl.ongoingImageLoads[i].onload = undefined;
+    // Ignore all ongoing image loads by removing their onload handler
+    for (var i = 0; i < glProperties.ongoingImageLoads.length; i++) {
+        glProperties.ongoingImageLoads[i].onload = undefined;
     }
-    pwgl.ongoingImageLoads = [];
+    glProperties.ongoingImageLoads = [];
 }
 
+// Re-initialise variables when context is restored
 function handleContextRestored(event) {
     init();
-    pwgl.requestId = requestAnimFrame(draw, canvas);
+    glProperties.requestId = requestAnimFrame(draw, canvas);
 }
 
+// Set the keycode to true on the list of pressed keys (or add with true if not on the list)
+function handleKeyDown(event) {
+    glProperties.listOfPressedKeys[event.keyCode] = true;
+}
+
+// Set keycode to false for list of pressed keys
+function handleKeyup(event) {
+    glProperties.listOfPressedKeys[event.keyCode] = false;
+}
+
+// capture variables used when dragging the mouse
 function myMouseDown(ev) {
-    drag = 1;
+    drag = true;
     xOffs = ev.clientX;
     yOffs = ev.clientY;
 }
 
+// set drag to 0 when no longer dragging the mouse
 function myMouseUp(ev) {
-    drag = 0;
+    drag = false;
 }
 
+// Handle the mouse being moved
 function myMouseMove(ev) {
-    if (drag == 0) return;
+    if (!drag) return;
 
     if (ev.shiftKey) {
+        // if the shift key is pressed, move the object along the X-axis
         transX = +(ev.clientX - xOffs) / 10;
     } else if (ev.altKey) {
+        // if the alt key is pressed, move the object along the Y-axis
         transY = -(ev.clientY - yOffs) / 10;
     } else {
-        yRot = - xOffs + ev.clientX;
-        xRot = - yOffs + ev.clientY;
+        // else, rotate the object in both the X and Y axis
+        yRot = -xOffs + ev.clientX;
+        xRot = -yOffs + ev.clientY;
     }
 
     xOffs = ev.clientX;
     yOffs = ev.clientY;
-    //console.log("xOff=" + xOffs + "yOff" + yOffs);
 }
 
+// Handle the scrollwheel moveing
 function wheelHandler(ev) {
+    // move the object along the Z-axis
     transZ = ev.deltaY / 10;
-    //console.log("delta = " + ev.detail);
     ev.preventDefault();
 }

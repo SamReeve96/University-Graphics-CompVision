@@ -1,4 +1,5 @@
 precision mediump float;
+
 varying vec2 vTextureCoordinates;
 varying vec3 vNormalEye;
 varying vec3 vPositionEye3;
@@ -12,8 +13,7 @@ uniform sampler2D uSampler;
 const float shininess = 3.0;
 
 void main() {
-    
-    //An alterenate way to calc (l)
+    // Distance from the camera to light source
     vec3 vectorToLightSource = normalize(uLightPosition - vPositionEye3);
 
     //Calculate the n Dot l for diffuse lighting
@@ -28,7 +28,7 @@ void main() {
     float rdotv = max(dot(reflectionVector, viewVectorEye), 0.0);
     float specularLightWeighting = pow(rdotv, shininess);
 
-    //Sum up all the refelection components and send to the fragment shader
+    //Add all the refelection components and send to the fragment shader
     vec3 lightWeighting = uAmbientLightColor +
                         uDiffuseLightColor * diffuseLightWeighting +
                         uSpecularLightColor * specularLightWeighting;
