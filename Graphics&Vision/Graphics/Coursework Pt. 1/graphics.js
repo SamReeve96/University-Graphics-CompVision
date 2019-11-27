@@ -649,7 +649,7 @@ function drawDish(texture, r = 255, g = 0, b = 0, a = 1) {
 }
 
 // Draw a satellite using the basic shape methods already defined
-function drawsatellite(texture, r = 255, g = 0, b = 0, a = 1) {
+function drawsatellite(texture, r, g, b, a) {
     // Draw the satellite body
     pushModelViewMatrix();
     mat4.translate(glProperties.modelViewMatrix, [0.0, 0.0, 0.0], glProperties.modelViewMatrix);
