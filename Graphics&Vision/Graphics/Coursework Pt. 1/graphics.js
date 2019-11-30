@@ -30,7 +30,7 @@ function createGlContext(canvas) {
 
     // Set the size of the canvas to almost be the full size of the window
     // Allowing space for the FPS counter 
-    // (used to inform the user if an error occured without opening dev tools)
+    // (used to inform the user if an error occurred without opening dev tools)
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight * 0.95;
 
@@ -116,7 +116,7 @@ function setupShaders() {
     glContext.enableVertexAttribArray(glProperties.vertexPositionAttributeLoc);
     glContext.enableVertexAttribArray(glProperties.vertexTextureAttributeLoc);
 
-    //Initalise the matricies
+    //Initialize the matrices
     glProperties.modelViewMatrix = mat4.create();
     glProperties.projectionMatrix = mat4.create();
     glProperties.modelViewMatrixStack = [];
@@ -128,7 +128,7 @@ function setupCubeBuffers() {
     glProperties.cubeVertexPositionBuffer = glContext.createBuffer();
     glContext.bindBuffer(glContext.ARRAY_BUFFER, glProperties.cubeVertexPositionBuffer);
 
-    //Setup the cube to be a 1x1x1 size, if an instance of a cube needs to be bigger or smaller, it should be tranformed
+    //Setup the cube to be a 1x1x1 size, if an instance of a cube needs to be bigger or smaller, it should be transformed
     var cubeVertexPosition = [
 
         // Front face
@@ -281,7 +281,7 @@ function setupCubeBuffers() {
 // Setup Positions, indices, textures and normals for a sphere object
 function setupSphereBuffers() {
     // Sphere latitude and longitude variables, can be increased for higher res sphere model
-    // at cost of performance or potentical out of memory crash
+    // at cost of performance or potential out of memory crash
     let totalLatRings = 100;
     let totalLongRings = 100;
 
@@ -369,7 +369,7 @@ function setupSphereBuffers() {
 // Setup Positions, indices, textures and normals for a dish object
 function setupDishBuffers() {
     // Dish latitude and longitude variables, can be increased for higher res dish model
-    // at cost of performance or potentical out of memory crash
+    // at cost of performance or potential out of memory crash
     let totalLatRings = 100;
     let totalLongRings = 100;
 
@@ -507,7 +507,7 @@ function textureFinishedLoading(image, texture) {
     glContext.pixelStorei(glContext.UNPACK_FLIP_Y_WEBGL, true);
     glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, image);
 
-    // Check if the image being used as a texture has dimiensions that are a power of two and setup the texture accordingly
+    // Check if the image being used as a texture has dimensions that are a power of two and setup the texture accordingly
     if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
         // Is a power of 2, generate mipmap
         glContext.generateMipmap(glContext.TEXTURE_2D);
@@ -546,7 +546,7 @@ function popModelViewMatrix() {
     glProperties.modelViewMatrix = glProperties.modelViewMatrixStack.pop();
 }
 
-// Upload modelview matrix values to the shdaer
+// Upload modelview matrix values to the shader
 function uploadModelViewMatrixToShader() {
     glContext.uniformMatrix4fv(glProperties.uniformMVMatrixLoc, false, glProperties.modelViewMatrix);
 }
@@ -577,7 +577,7 @@ function drawCube(texture, r = 255, g = 0, b = 0, a = 1) {
 
     // If a texture is not defined, use RGBA values.
     // If RGBA values are not provided by method call, use default red RGBA values 
-    // A red object then informs the user there is a texture issue, rather than something else where the object isnt drawn
+    // A red object then informs the user there is a texture issue, rather than something else where the object isn't drawn
     if (texture !== undefined) {
         glContext.activeTexture(glContext.TEXTURE0);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
@@ -605,7 +605,7 @@ function drawSphere(texture, r = 255, g = 0, b = 0, a = 1) {
 
     // If a texture is not defined, use RGBA values.
     // If RGBA values are not provided by method call, use default red RGBA values 
-    // A red object then informs the user there is a texture issue, rather than something else where the object isnt drawn
+    // A red object then informs the user there is a texture issue, rather than something else where the object isn't drawn
     if (texture !== undefined) {
         glContext.activeTexture(glContext.TEXTURE0);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
@@ -633,7 +633,7 @@ function drawDish(texture, r = 255, g = 0, b = 0, a = 1) {
 
     // If a texture is not defined, use RGBA values.
     // If RGBA values are not provided by method call, use default red RGBA values 
-    // A red object then informs the user there is a texture issue, rather than something else where the object isnt drawn
+    // A red object then informs the user there is a texture issue, rather than something else where the object isn't drawn
     if (texture !== undefined) {
         glContext.activeTexture(glContext.TEXTURE0);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
@@ -649,7 +649,7 @@ function drawDish(texture, r = 255, g = 0, b = 0, a = 1) {
 }
 
 // Draw a satellite using the basic shape methods already defined
-function drawsatellite(texture, r, g, b, a) {
+function drawSatellite(texture, r, g, b, a) {
     // Draw the satellite body
     pushModelViewMatrix();
     mat4.translate(glProperties.modelViewMatrix, [0.0, 0.0, 0.0], glProperties.modelViewMatrix);
@@ -755,7 +755,7 @@ function draw() {
     uploadProjectionMatrixToShader();
     uploadNormalMatrixToShader();
     // Draw satellite with a textured body, and golden rgba dish & rods (Solar panels are always light blue)
-    drawsatellite(glProperties.satelliteTexture, 255, 215, 0, 1);
+    drawSatellite(glProperties.satelliteTexture, 255, 215, 0, 1);
     popModelViewMatrix();
 
     //update the number of frames rendered for that second
@@ -766,7 +766,7 @@ function draw() {
 function startup() {
     canvas = document.getElementById("myGLCanvas");
 
-    //Add eventlisteners
+    //Add event listeners
     canvas.addEventListener('web glContextlost', handleContextLost, false);
     canvas.addEventListener('web glContextrestored', handleContextRestored, false);
     window.addEventListener("resize", canvasResize, false);
@@ -784,7 +784,7 @@ function startup() {
     draw();
 }
 
-// Initialise variables for the program
+// Initialize variables for the program
 function init() {
     glContext = createGlContext(canvas);
 
@@ -839,7 +839,7 @@ function handlePressedDownKeys() {
 
     //Arrow down - decrease orbit speed
     if (glProperties.listOfPressedKeys[40]) {
-        // minimun orbit speed to prevent stalling / reversing orbit directopn
+        // minimum orbit speed to prevent stalling / reversing orbit direction
         if (glProperties.orbitSpeed > glProperties.minimumOrbitSpeed) {
             glProperties.orbitSpeed -= 0.1;
         }
@@ -871,7 +871,7 @@ function handleContextLost(event) {
     glProperties.ongoingImageLoads = [];
 }
 
-// Re-initialise variables when context is restored
+// Re-initialize variables when context is restored
 function handleContextRestored(event) {
     init();
     glProperties.requestId = requestAnimFrame(draw, canvas);
@@ -919,7 +919,7 @@ function myMouseMove(ev) {
     yOffs = ev.clientY;
 }
 
-// Handle the scrollwheel moveing
+// Handle the scrollwheel moving
 function wheelHandler(ev) {
     // move the object along the Z-axis
     transZ = ev.deltaY / 10;

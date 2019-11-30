@@ -1,0 +1,20 @@
+{
+    "cSpell.ignoreWords": [
+        "contextlost",
+        "contextrestored",
+        "coord",
+        "do",
+        "gl",
+        "glsl",
+        "llib",
+        "mediump",
+        "mmouse",
+        "modelview",
+        "rdotv",
+        "sattest",
+        "scroll"
+    ],
+    "cSpell.words": [
+        "texel"
+    ]
+}

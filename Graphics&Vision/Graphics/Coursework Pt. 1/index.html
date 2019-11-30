@@ -54,7 +54,7 @@
             //Calculate the n Dot l for diffuse lighting
             float diffuseLightWeighting = max(dot(vNormalEye, vectorToLightSource), 0.0);
         
-            //calculate the refelection vector (r) that is needed for the specular light.
+            //calculate the reflection vector (r) that is needed for the specular light.
             //Function() reflect is the GLSL function fot the calculation of the reflective of (r)
             vec3 reflectionVector = normalize(reflect(-vectorToLightSource, vNormalEye));
         
@@ -63,7 +63,7 @@
             float rdotv = max(dot(reflectionVector, viewVectorEye), 0.0);
             float specularLightWeighting = pow(rdotv, shininess);
         
-            //Add all the refelection components and send to the fragment shader
+            //Add all the reflection components and send to the fragment shader
             vec3 lightWeighting = uAmbientLightColor +
                                 uDiffuseLightColor * diffuseLightWeighting +
                                 uSpecularLightColor * specularLightWeighting;
