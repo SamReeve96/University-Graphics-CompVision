@@ -1,27 +1,22 @@
 close all
 clear
 
-% Constants
-MaxVehicleWidth = 2.5; % in meters
-MaxVehicleSpeed = 30; % in miles per hour
-FireEngineWidthLengthRatio = 3/1;
-TimeBetweenFrames = 0.1; %Seconds
-
 % Calculate all vehicle data
+% files = {'fire01.jpg','fire02.jpg'};
 files = {'001.jpg','002.jpg','003.jpg','004.jpg','005.jpg','006.jpg','007.jpg','008.jpg','009.jpg','010.jpg','011.jpg','oversized.jpg','fire01.jpg','fire02.jpg'};
 numberOfFiles = numel(files);
 numberOfAttributes = 6; %filename, Width, length, width/Length ratio, position, colour, image
-vehicleData = {'filename', 'width', 'length', 'Pixel width/length ratio', 'Pixel CenterPosition', 'Vehicle Colour', 'image'};
+vehicleData = {'filename', 'vehicleWidth', 'vehicleLength', 'vehicleWidth/vehicleLength', 'vehicleCenterPosition', 'vehicleColour', 'vehicleImage'};
 for i = 1:numberOfFiles
-    [carWidth, carLength, carCenterPosition, carColour, RGBImage] = findCarData(string(files{i}), i);
-    newVehicleData = [{string(files{i})}, carWidth, carLength, carWidth/carLength, carCenterPosition, carColour, RGBImage];
+    [vehicleWidth, vehicleLength, vehicleCenterPosition, vehicleColour, vehicleImage] = findvehicleData(string(files{i}), i);
+    newVehicleData = [{string(files{i})}, vehicleWidth, vehicleLength, vehicleWidth/vehicleLength, vehicleCenterPosition, vehicleColour, vehicleImage];
     vehicleData = [vehicleData;newVehicleData];
 end
 
-% test method calls
-% compareFrames(vehicleData, 'fire01.jpg', 'fire02.jpg');
-% compareFrames(vehicleData, '003.jpg', 'fire02.jpg');
-% compareFrames(vehicleData, '001.jpg', '011.jpg');
+% compareFrames(vehicleData, 'fire01.jpg', 'fire02.jpg')
+compareFrames(vehicleData, '001.jpg', '011.jpg')
+% compareFrames(vehicleData, '001.jpg', '002.jpg')
+% compareFrames(vehicleData, 'fire01.jpg', '001.j pg')
 
 function compareFrames(vehicleData, filename1, filename2)
     % Display images with their centers
@@ -39,8 +34,12 @@ function compareFrames(vehicleData, filename1, filename2)
     end
 
     % Check if its a fire engine (colour, width/length ratio)
-    vehicleIsRed = strcmp(vehicleOneData(6), 'Red');
-    if (vehicleIsRed) % && vehicleWidthLengthRatio =< FireEngineWidthLengthRatio % Need a boundry for this?
+    FireEngineWidthLengthRatio = 0.33; %S Should be to 1/3
+    vehicleIsRed = strcmp(vehicleOneData(6), 'Red')
+    vehicleWidthLengthRatio = round(vehicleOneData{4} * 100)/100 %Should this be an average of the two frame values?
+    % ROUNDED TO 2dp.
+
+    if (vehicleIsRed) && (vehicleWidthLengthRatio == FireEngineWidthLengthRatio) % Need an area for this?
         disp('Vehicle is red, and has the width/length ratio of a fire truck');
         disp('Therefore a fire truck, exempt from further processing'); %UPDATE TO STATE YOU CONSIDERED WIDTH/LENGTH
         return;
@@ -51,13 +50,28 @@ function compareFrames(vehicleData, filename1, filename2)
 
 
     % check if its too wide in M
-    disp('Check Vehicle width');
+    disp('Checking Vehicle width');
+    MaxVehicleWidth = 2.5; % in meters
+    vehicleWidth = vehicleOneData{2}
 
-    % if so calc speed of car
-    % Delta pos / time in mph
+    if (vehicleWidth > MaxVehicleWidth)
+        disp('Vehicle is too wide, report!');
+    else
+        disp('Vehicle is of an accetable width');
+    end
+
+    % calc speed of car - Delta pos / time in mph
+    %Seconds
+    vehicleSpeed = CalculateVehicleSpeed(vehicleOneData{5}, vehicleTwoData{5})
     
     %check if speeding
+    MaxVehicleSpeed = 30; % in miles per hour
     disp('Check Vehicle speed');
+    if (vehicleSpeed > MaxVehicleSpeed)
+        disp('Vehicle is going too fast, report!');
+    else
+        disp('Vehicle is traveling at an acceptable speed');
+    end
 
 end
 
@@ -85,8 +99,8 @@ function vehicle = getVehicleData(vehicleData, filename)
 end
 
 
-function [carWidth, carLength, carCenterPosition, carColour, RGBImage] = findCarData(filepath, fileIndex)
-    % load the Car target model
+function [vehicleWidth, vehicleLength, vehicleCenterPosition, vehicleColour, vehicleImage] = findvehicleData(filepath, fileIndex)
+    % load the vehicle target model
     targetRGB = imread(filepath);
 
     targetHSV = rgb2hsv(targetRGB);
@@ -94,98 +108,119 @@ function [carWidth, carLength, carCenterPosition, carColour, RGBImage] = findCar
 
     targetBW = imbinarize(targetHue);
 
+    vehicleColour = GetVehicleColour(targetBW, targetRGB);
+
+    vehicleImage = targetRGB;
+
     % blna
     [targetBoundries, targetLabels, targetTotalObjects, targetDependancies] = bwboundaries(targetBW); 
 
     % find largest boundary
     LengthOfEachCell = cellfun('length', targetBoundries);
-    [maxCellLength, index] = max(LengthOfEachCell);
+    [~, index] = max(LengthOfEachCell);
     maxTargetBoundry = targetBoundries{index};
 
     % Show boundary
     [M N] = size(targetBW);
     targetBoundaryImage = bound2im(maxTargetBoundry, M, N, min(maxTargetBoundry(:,1)),min(maxTargetBoundry(:,2)));
-
     % figure, imshow(targetBoundaryImage);
 
-
     minCoord = min(maxTargetBoundry);
-    Top = minCoord(1);
-    Left = minCoord(2);
+    front = minCoord(1);
+    left = minCoord(2);
 
     maxCoord = max(maxTargetBoundry);
-    Bottom = maxCoord(1);
-    Right = maxCoord(2);
+    back = maxCoord(1);
+    right = maxCoord(2);
 
-    xMiddle = (Left-Right)/2 + Right;
-    yMiddle = (Bottom-Top)/2 + Top;
 
-    carCenterPosition = [xMiddle,yMiddle];
+    xMiddle = (left-right)/2 + right;
+    yMiddle = (back-front)/2 + front;
 
-    % calc the distance from front of vehicle to origin(S)
-    % pixel delta = pixel difference from vehicle front to center point of image
-    % theta = pixel delta * 0.042
-    % alpha = 60 - theta
-    % S = 7 tan alpha  CONFIRM trig
+    vehicleCenterPosition = [xMiddle,yMiddle];
 
     [imageY, imageX] = size(targetBW);
 
-    % Having to sub one for some reason...
-    frontDelta = Top - ((imageY - 1)/2);
-    % Calc theta (angle difference between camera center and vehicle front)
-    frontTheta = frontDelta * 0.042;
-    frontAlpha = 60 - frontTheta;
-    frontAlphaRadian = deg2rad(frontAlpha);
-    frontDistanceFromOrigin = 7 * tan(frontAlphaRadian);
-
-    % Having to sub one for some reason...
-    backDelta = Bottom - ((imageY - 1)/2);
-    % Calc theta (angle difference between camera center and vehicle back)
-    backTheta = backDelta * 0.042;
-    backAlpha = 60 - backTheta;
-    backAlphaRadian = deg2rad(backAlpha);
-    backDistanceFromOrigin = 7 * tan(backAlphaRadian);
-
-    carLength = abs(frontDistanceFromOrigin - backDistanceFromOrigin);
+    centerOfImageY = ((imageY - 1)/2);
+    centerOfImageX = ((imageX - 1)/2);
 
 
+    cameraHeight = 7; % meters high
+    pixelToDegrees = 0.042; 
 
+    vehicleLength = CalculateRealVerticalDistance(front, back, centerOfImageY, cameraHeight);
 
+    % Calc length of adjecent (needs to be from center to widest point though)
+    backDistanceFromImgCenter = (back - centerOfImageY);
+    backAngularDiff = 60 - (backDistanceFromImgCenter * pixelToDegrees);
+    vehicleBumperToCamera = cameraHeight * tand(backAngularDiff);
+    cameraDistanceTovehicleBumper = sqrt(vehicleBumperToCamera^2 + cameraHeight^2); %adjacentLength
 
-    % Car width = 2 * base of right angle (T)
-    % Beta is the angle deviation from the center of the vehicle to the edge
-    % T = cameraToCar distance * sin(Beta in radians)
-    carLeftDelta = abs(Left - ((imageX - 1)/2));
-    carRightDelta = abs(Right - ((imageX - 1)/2));
-    carTotalDelta = carLeftDelta + carRightDelta;
-    carAngluarWidth = (carTotalDelta * 0.042);
-    carRadianWidth = deg2rad(carAngluarWidth);
-    carWidth = abs(backDistanceFromOrigin * tan(carRadianWidth));
+    vehicleWidth = CalculateRealHorizontalDistance(left, right, centerOfImageX, cameraDistanceTovehicleBumper);
 
-
-    carWidthLengthRatio = (carWidth/carLength);
-    
-    % vehicle colour
-    mask =  imclearborder(targetBW);
-
-    targetRedChannel = targetRGB(:,:,1);
-    targetGreenChannel = targetRGB(:,:,2);
-    targetBlueChannel = targetRGB(:,:,3);
-
-    meanRed = mean(targetRedChannel(mask));
-    meanGreen = mean(targetGreenChannel(mask));
-    meanBlue = mean(targetBlueChannel(mask));
-
-    carColour = 'undefined';
-
-    if meanRed > meanBlue && meanRed > meanGreen
-        carColour = 'Red';
-    elseif meanGreen > meanBlue && meanGreen > meanRed
-        carColour = 'Green';
-    elseif meanBlue > meanGreen && meanBlue > meanRed
-        carColour = 'Blue';
-    end
-
-    RGBImage = targetRGB;
+    vehicleWidthLengthRatio = (vehicleWidth/vehicleLength);
 end
 
+function vehicleSpeed = CalculateVehicleSpeed(vehicleOneCenterPoint, vehicleTwoCenterPoint)
+    %Calculate distance
+    centerOfImageY = ((641 - 1)/2); % replace magic number
+    cameraHeight = 7; % meters high
+    distanceTraveled = CalculateRealVerticalDistance(vehicleOneCenterPoint(1), vehicleTwoCenterPoint(1), centerOfImageY, cameraHeight);
+    
+    timeBetweenFrames = 0.1; % Seconds
+    metersPerSecond = distanceTraveled/timeBetweenFrames;
+
+    ms2mph = 2.236936; % 1ms = 2.236936mph
+
+    vehicleSpeed = metersPerSecond * ms2mph;
+end
+
+function lengthInMeters = CalculateRealVerticalDistance(topPixelPos, bottomPixelPos, centerOfImageY, adjacentLength)
+    pixelToDegrees = 0.042; 
+
+    frontDistanceFromImgCenter = (topPixelPos - centerOfImageY);
+    frontAngularDiff = 60 - (frontDistanceFromImgCenter * pixelToDegrees);
+    frontDistanceFromImgBase = adjacentLength * tand(frontAngularDiff);
+
+    backDistanceFromImgCenter = (bottomPixelPos - centerOfImageY);
+    backAngularDiff = 60 - (backDistanceFromImgCenter * pixelToDegrees);
+    backDistanceFromImgBase = adjacentLength * tand(backAngularDiff);
+
+    lengthInMeters = (frontDistanceFromImgBase - backDistanceFromImgBase);
+end
+
+function widthInMeters = CalculateRealHorizontalDistance(leftPixelPos, rightPixelPos, centerOfImageX, adjacentLength)
+
+    vehicleLeftDelta = leftPixelPos - centerOfImageX;
+    vehicleLeftAngluarWidth = (vehicleLeftDelta * 0.042);
+    vehicleLeftWidth = abs(adjacentLength * tand(vehicleLeftAngluarWidth));
+    
+    vehicleRightDelta = rightPixelPos - centerOfImageX;
+    vehicleRightAngluarWidth = (vehicleRightDelta * 0.042);
+    vehicleRightWidth = abs(adjacentLength * tand(vehicleRightAngluarWidth));
+
+    widthInMeters = vehicleLeftWidth + vehicleRightWidth;
+end
+
+function vehicleColour = GetVehicleColour(BWImage, RGBImage)
+        % vehicle colour
+        mask = imclearborder(BWImage);
+
+        targetRedChannel = RGBImage(:,:,1);
+        targetGreenChannel = RGBImage(:,:,2);
+        targetBlueChannel = RGBImage(:,:,3);
+    
+        meanRed = mean(targetRedChannel(mask));
+        meanGreen = mean(targetGreenChannel(mask));
+        meanBlue = mean(targetBlueChannel(mask));
+    
+        vehicleColour = 'undefined';
+    
+        if meanRed > meanBlue && meanRed > meanGreen
+            vehicleColour = 'Red';
+        elseif meanGreen > meanBlue && meanGreen > meanRed
+            vehicleColour = 'Green';
+        elseif meanBlue > meanGreen && meanBlue > meanRed
+            vehicleColour = 'Blue';
+        end
+end
