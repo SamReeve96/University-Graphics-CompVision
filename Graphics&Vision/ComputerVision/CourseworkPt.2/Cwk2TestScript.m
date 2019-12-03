@@ -3,14 +3,15 @@ clear
 
 % Constants
 MaxVehicleWidth = 2.5; % in meters
-MaxVehicleSpeed = 30 % in miles per hour
-FireEngineWidthLengthRatio = 3/1 
+MaxVehicleSpeed = 30; % in miles per hour
+FireEngineWidthLengthRatio = 3/1;
+TimeBetweenFrames = 0.1; %Seconds
 
 % Calculate all vehicle data
 files = {'001.jpg','002.jpg','003.jpg','004.jpg','005.jpg','006.jpg','007.jpg','008.jpg','009.jpg','010.jpg','011.jpg','oversized.jpg','fire01.jpg','fire02.jpg'};
 numberOfFiles = numel(files);
 numberOfAttributes = 6; %filename, Width, length, width/Length ratio, position, colour, image
-vehicleData = {'filename', 'Pixel width', 'Pixel length', 'Pixel width/length ratio', 'Pixel CenterPosition', 'Vehicle Colour', 'image'};
+vehicleData = {'filename', 'width', 'length', 'Pixel width/length ratio', 'Pixel CenterPosition', 'Vehicle Colour', 'image'};
 for i = 1:numberOfFiles
     [carWidth, carLength, carCenterPosition, carColour, RGBImage] = findCarData(string(files{i}), i);
     newVehicleData = [{string(files{i})}, carWidth, carLength, carWidth/carLength, carCenterPosition, carColour, RGBImage];
@@ -18,9 +19,9 @@ for i = 1:numberOfFiles
 end
 
 % test method calls
-compareFrames(vehicleData, 'fire01.jpg', 'fire02.jpg');
-compareFrames(vehicleData, '003.jpg', 'fire02.jpg');
-compareFrames(vehicleData, '001.jpg', '011.jpg');
+% compareFrames(vehicleData, 'fire01.jpg', 'fire02.jpg');
+% compareFrames(vehicleData, '003.jpg', 'fire02.jpg');
+% compareFrames(vehicleData, '001.jpg', '011.jpg');
 
 function compareFrames(vehicleData, filename1, filename2)
     % Display images with their centers
@@ -103,25 +104,66 @@ function [carWidth, carLength, carCenterPosition, carColour, RGBImage] = findCar
 
     % Show boundary
     [M N] = size(targetBW);
-    g1 = bound2im(maxTargetBoundry, M, N, min(maxTargetBoundry(:,1)),min(maxTargetBoundry(:,2)));
+    targetBoundaryImage = bound2im(maxTargetBoundry, M, N, min(maxTargetBoundry(:,1)),min(maxTargetBoundry(:,2)));
+
+    % figure, imshow(targetBoundaryImage);
+
 
     minCoord = min(maxTargetBoundry);
-    top = minCoord(1);
-    left = minCoord(2);
+    Top = minCoord(1);
+    Left = minCoord(2);
 
     maxCoord = max(maxTargetBoundry);
-    bottom = maxCoord(1);
-    right = maxCoord(2);
+    Bottom = maxCoord(1);
+    Right = maxCoord(2);
 
-    yMiddle = (right-left)/2 + left;
-    xMiddle = (bottom-top)/2 + top;
-    carWidth = (right-left);
-    carLength = (bottom-top);
+    xMiddle = (Left-Right)/2 + Right;
+    yMiddle = (Bottom-Top)/2 + Top;
 
-% NEED TO CONVERT PIXEL VALUES TO REAL WORLD
+    carCenterPosition = [xMiddle,yMiddle];
+
+    % calc the distance from front of vehicle to origin(S)
+    % pixel delta = pixel difference from vehicle front to center point of image
+    % theta = pixel delta * 0.042
+    % alpha = 60 - theta
+    % S = 7 tan alpha  CONFIRM trig
+
+    [imageY, imageX] = size(targetBW);
+
+    % Having to sub one for some reason...
+    frontDelta = Top - ((imageY - 1)/2);
+    % Calc theta (angle difference between camera center and vehicle front)
+    frontTheta = frontDelta * 0.042;
+    frontAlpha = 60 - frontTheta;
+    frontAlphaRadian = deg2rad(frontAlpha);
+    frontDistanceFromOrigin = 7 * tan(frontAlphaRadian);
+
+    % Having to sub one for some reason...
+    backDelta = Bottom - ((imageY - 1)/2);
+    % Calc theta (angle difference between camera center and vehicle back)
+    backTheta = backDelta * 0.042;
+    backAlpha = 60 - backTheta;
+    backAlphaRadian = deg2rad(backAlpha);
+    backDistanceFromOrigin = 7 * tan(backAlphaRadian);
+
+    carLength = abs(frontDistanceFromOrigin - backDistanceFromOrigin);
+
+
+
+
+
+    % Car width = 2 * base of right angle (T)
+    % Beta is the angle deviation from the center of the vehicle to the edge
+    % T = cameraToCar distance * sin(Beta in radians)
+    carLeftDelta = abs(Left - ((imageX - 1)/2));
+    carRightDelta = abs(Right - ((imageX - 1)/2));
+    carTotalDelta = carLeftDelta + carRightDelta;
+    carAngluarWidth = (carTotalDelta * 0.042);
+    carRadianWidth = deg2rad(carAngluarWidth);
+    carWidth = abs(backDistanceFromOrigin * tan(carRadianWidth));
+
 
     carWidthLengthRatio = (carWidth/carLength);
-    carCenterPosition = [yMiddle,xMiddle];
     
     % vehicle colour
     mask =  imclearborder(targetBW);
