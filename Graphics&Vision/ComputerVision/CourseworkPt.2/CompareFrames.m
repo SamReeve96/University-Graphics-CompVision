@@ -1,10 +1,15 @@
 % Using the vehicle data and frames provided, check details about the vehicle across each frame (i.e. vehicle type, width and speed)
-function [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResult] = CompareFrames(vehicleData, filename1, filename2)
+function [vehiclesAreSameColour, vehicleIsRed, avgVehicleWidthLengthRatio, fireTruckCheckResult, avgVehicleWidth, widthCheckResult, vehicleSpeed, speedCheckResult, reportedResult] = CompareFrames(vehicleData, filename1, filename2)
     % Initialize result strings (these are output to the console, and also stored in a table if running the test script)
     fireTruckCheckResult = 'Not checked';
     widthCheckResult = 'Not checked';
     speedCheckResult = 'Not checked';
     reportedResult = 'Not checked';
+    vehiclesAreSameColour= false;
+    vehicleIsRed = false;
+    avgVehicleWidthLengthRatio = 'Not calculated';
+    avgVehicleWidth = 'Not calculated';
+    vehicleSpeed = 'Not calculated';
 
     % Retrieve vehicle data from vehicle data cell array
     vehicleOneData = GetVehicleData(vehicleData, filename1);

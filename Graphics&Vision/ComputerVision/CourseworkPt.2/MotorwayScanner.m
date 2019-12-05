@@ -1,3 +1,9 @@
+% use case Script - 
+% Asks the user for two files surrounded by quotations e.g. "001.jpg"
+% If two valid filenames have been suppplied, the vehicle data will be calculated
+% after, the frames of the images will be compare, outputing information the command window 
+% with figures of the two images, showing how they were processed.
+
 close all
 clear
 

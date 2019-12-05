@@ -1,3 +1,11 @@
+% Testing Script - 
+% Generates vehicle data for all images, then calls the compare frames method to test for all possible senarios
+% You don't need to provide any arguments, just run this script to execute the test.
+% Information will be displayed in the command window, however for convinience critical information, 
+% i.e. decision about the vehicle are stored in a table called "testResultsTable" open this in the workspace 
+% to see what decisions were made for each pair of images
+% to see the raw data check the "vehicleDataTable" table
+
 close all
 clear
 
@@ -34,12 +42,12 @@ function testResultsTable = testAllSituations(vehicleData)
         testFiles = tests{i};
         testFileOne = string(testFiles{1});
         testFileTwo = string(testFiles{2});
-        [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResult] = CompareFrames(vehicleData, testFileOne, testFileTwo); 
-        newTestResults = {testFileOne, testFileTwo, fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResult};
+        [vehiclesAreSameColour, vehicleIsRed, avgVehicleWidthLengthRatio, fireTruckCheckResult, avgVehicleWidth, widthCheckResult, vehicleSpeed, speedCheckResult, reportedResult] = CompareFrames(vehicleData, testFileOne, testFileTwo); 
+        newTestResults = {testFileOne, testFileTwo, vehiclesAreSameColour, vehicleIsRed, avgVehicleWidthLengthRatio, fireTruckCheckResult, avgVehicleWidth, widthCheckResult, vehicleSpeed, speedCheckResult, reportedResult};
         testResults = [testResults; newTestResults];
     end
     
     % Convert testResults cell array to table with headings
-    testResultsTable = cell2table(testResults, 'VariableNames',{'testFileOne', 'testFileTwo', 'Firetruck Check result', 'Width Check Result', 'speed Check Result', 'reported'});
+    testResultsTable = cell2table(testResults, 'VariableNames',{'testFileOne', 'testFileTwo', 'Are vehicles the same colour', 'is vehicle red', 'Average vehicle width (between frames)', 'firetruck Check Result' , 'Average vehicle width', 'width Check Result', 'vehicle Speed', 'speedCheckResult', 'reportedResult'});
             
 end
