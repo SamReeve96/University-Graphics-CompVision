@@ -10,8 +10,6 @@ function [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResu
     vehicleOneData = GetVehicleData(vehicleData, filename1);
     vehicleTwoData = GetVehicleData(vehicleData, filename2);
 
-% Display all on the same figure
-
     figure;
     % Display Saturation images
     subplot(1,4,1)
@@ -22,20 +20,22 @@ function [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResu
     % Display images with their boundboxes
     subplot(1,4,3)
     imshow(vehicleOneData{10});
-    % Display images with their centers TODO: ADD FRONT AND BUMPER POINTS
+    % Display images with their centers
     DisplayImageWithPOICrosses(vehicleOneData);
 
     figure;
+    % Display Saturation images
     subplot(1,4,1)
     imshow(vehicleTwoData{8});
+    % Display binary images
     subplot(1,4,2)
     imshow(vehicleTwoData{9});
+    % Display images with their boundboxes
     subplot(1,4,3)
     imshow(vehicleTwoData{10});
+    % Display images with their centers
     subplot(1,4,4)
     DisplayImageWithPOICrosses(vehicleTwoData);
-
-
 
     % Check the images contain vehicles of the same colour
     vehiclesAreSameColour = strcmp(vehicleOneData(6), vehicleTwoData(6));
@@ -102,7 +102,7 @@ function [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResu
 
 end
 
-% Draw a cross on an image at the center of the vehicle
+% Draw a cross on an image at the points of interest (left, right, front and back most points)
 function DisplayImageWithPOICrosses(vehicleData)
     % Show image of car in RGB
     subplot(1,4,4)
