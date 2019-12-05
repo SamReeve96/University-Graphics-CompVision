@@ -10,7 +10,7 @@ function [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResu
     vehicleOneData = GetVehicleData(vehicleData, filename1);
     vehicleTwoData = GetVehicleData(vehicleData, filename2);
 
-    figure;
+    figure('Name', [vehicleOneData{1}]);
     % Display Saturation images
     subplot(1,4,1)
     imshow(vehicleOneData{8});
@@ -23,7 +23,7 @@ function [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResu
     % Display images with their centers
     DisplayImageWithPOICrosses(vehicleOneData);
 
-    figure;
+    figure('Name', vehicleTwoData{1});
     % Display Saturation images
     subplot(1,4,1)
     imshow(vehicleTwoData{8});
@@ -79,7 +79,12 @@ function [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResu
     disp(widthCheckResult);
 
     % Calculate the speed of the vehicle between the two frames
-    vehicleSpeed = CalculateVehicleSpeed(vehicleOneData{5}, vehicleTwoData{5})
+    [vehicleCenterOneX, vehicleCenterOneY] = calculateVehicleCenter(vehicleOneData{5});
+    vehicleCenterOne = [vehicleCenterOneX, vehicleCenterOneY];
+    [vehicleCenterTwoX, vehicleCenterTwoY] = calculateVehicleCenter(vehicleTwoData{5});
+    vehicleCenterTwo = [vehicleCenterTwoX, vehicleCenterTwoY];
+
+    vehicleSpeed = CalculateVehicleSpeed(vehicleCenterOne, vehicleCenterTwo)
 
     % Check if vehicle is traveling too fast
     disp('-- Check Vehicle speed --');
@@ -102,6 +107,18 @@ function [fireTruckCheckResult, widthCheckResult, speedCheckResult, reportedResu
 
 end
 
+% Return the coordinates of the vehicle center, given the left, right, back and front most points
+function [vehicleCenterX, vehicleCenterY] = calculateVehicleCenter(vehicleBoundaries)
+    vehicleFrontPoint = vehicleBoundaries(1);
+    vehicleLeftPoint = vehicleBoundaries(2);
+    vehicleBackPoint = vehicleBoundaries(3);
+    vehicleRightPoint = vehicleBoundaries(4);
+
+    % Calculate the center of the vehicle
+    vehicleCenterX = (vehicleLeftPoint-vehicleRightPoint)/2 + vehicleRightPoint;
+    vehicleCenterY = (vehicleBackPoint-vehicleFrontPoint)/2 + vehicleFrontPoint;
+end
+
 % Draw a cross on an image at the points of interest (left, right, front and back most points)
 function DisplayImageWithPOICrosses(vehicleData)
     % Show image of car in RGB
@@ -113,9 +130,7 @@ function DisplayImageWithPOICrosses(vehicleData)
     vehicleBackPoint = vehicleData{5}(3);
     vehicleRightPoint = vehicleData{5}(4);
 
-    % Calculate the center of the vehicle
-    vehicleCenterX = (vehicleLeftPoint-vehicleRightPoint)/2 + vehicleRightPoint;
-    vehicleCenterY = (vehicleBackPoint-vehicleFrontPoint)/2 + vehicleFrontPoint;
+    [vehicleCenterX,vehicleCenterY] = calculateVehicleCenter(vehicleData{5});
 
     % vehicle Center
     drawCross(vehicleCenterX, vehicleCenterY, [1.0,1.0,1.0]);
