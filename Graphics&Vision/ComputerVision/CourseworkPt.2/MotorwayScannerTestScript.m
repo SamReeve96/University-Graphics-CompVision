@@ -1,10 +1,10 @@
 % Testing Script - 
 % Generates vehicle data for all images, then calls the compare frames method to test for all possible senarios
 % You don't need to provide any arguments, just run this script to execute the test.
-% Information will be displayed in the command window, however for convinience critical information, 
-% i.e. decision about the vehicle are stored in a table called "testResultsTable" open this in the workspace 
-% to see what decisions were made for each pair of images
-% to see the raw data check the "vehicleDataTable" table
+% Information will be displayed in the command window, however for convinience, critical information and 
+% decisions about the vehicle are stored in a table called "testResultsTable" open this in the workspace 
+% to see what decisions were made for each pair of images.
+% To see the raw data about the vehicle in each frame, check the "vehicleDataTable" table
 
 close all
 clear
@@ -48,6 +48,6 @@ function testResultsTable = testAllSituations(vehicleData)
     end
     
     % Convert testResults cell array to table with headings
-    testResultsTable = cell2table(testResults, 'VariableNames',{'testFileOne', 'testFileTwo', 'Are vehicles the same colour', 'is vehicle red', 'Average vehicle width (between frames)', 'firetruck Check Result' , 'Average vehicle width', 'width Check Result', 'vehicle Speed', 'speedCheckResult', 'reportedResult'});
+    testResultsTable = cell2table(testResults, 'VariableNames',{'testFileOne', 'testFileTwo', 'Are vehicles the same colour', 'is vehicle red', 'Average vehicle width/length ratio', 'firetruck Check Result' , 'Average vehicle width', 'width Check Result', 'vehicle Speed', 'speedCheckResult', 'reportedResult'});
             
 end
