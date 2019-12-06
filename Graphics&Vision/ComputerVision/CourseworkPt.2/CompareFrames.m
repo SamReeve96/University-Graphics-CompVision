@@ -79,7 +79,7 @@ function [vehiclesAreSameColour, vehicleIsRed, avgVehicleWidthLengthRatio, fireT
         widthCheckResult = 'Vehicle is too wide';
         reportVehicle = true;
     else
-        widthCheckResult = 'Vehicle is of an accetable width';
+        widthCheckResult = 'Vehicle is of an acceptable width';
     end
     disp(widthCheckResult);
 
