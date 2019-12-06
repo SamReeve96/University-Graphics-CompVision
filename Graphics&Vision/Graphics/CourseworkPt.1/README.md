@@ -8,7 +8,7 @@
 * **Mouse Click & Drag:**
   * Drag upwards/downwards: rotate the Y-Axis
     * Holding Alt-key: move the objects along the Y-Axis
-  * Draw sideways: rotate the X-Axis
+  * Drag sideways: rotate the X-Axis
     * Holding Shift-key: move the objects along the X-Axis
 * **Scroll wheel**
   * Scrolling will move the objects along the Z-Axis
