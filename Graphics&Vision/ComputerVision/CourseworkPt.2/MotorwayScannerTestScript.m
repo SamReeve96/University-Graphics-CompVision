@@ -21,7 +21,7 @@ for file = files
 end
 
 % Convert vehicle cell array to table with headings
-vehicleDataTable = cell2table(vehicleData, 'VariableNames',{'filename', 'vehicleWidth', 'vehicleLength', 'vehicleWidth/vehicleLength', 'vehicleBoundaryPoints', 'vehicleColour', 'vehicleRGBImage', 'vehicleSatImage', 'vehicleBWImage', 'vehicleBoundaryImage'});
+vehicleDataTable = cell2table(vehicleData, 'VariableNames',{'filename', 'vehicleWidth', 'vehicleLength', 'vehicleWidthVehicleLength', 'vehicleBoundaryPoints', 'vehicleColour', 'vehicleRGBImage', 'vehicleSatImage', 'vehicleBWImage', 'vehicleBoundaryImage'});
 
 % Store the results of all tests in a table, as it's easier to evaluate than checking the commnad window
 testResultsTable = testAllSituations(vehicleData);
