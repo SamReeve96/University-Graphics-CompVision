@@ -15,7 +15,7 @@ function [vehiclesAreSameColour, vehicleIsRed, avgVehicleWidthLengthRatio, fireT
     vehicleOneData = GetVehicleData(vehicleData, filename1);
     vehicleTwoData = GetVehicleData(vehicleData, filename2);
 
-    figure('Name', [vehicleOneData{1}]);
+    figure('Name', string(vehicleOneData{1}));
     % Display Saturation images
     subplot(1,4,1)
     imshow(vehicleOneData{8});
@@ -28,7 +28,7 @@ function [vehiclesAreSameColour, vehicleIsRed, avgVehicleWidthLengthRatio, fireT
     % Display images with their centers
     DisplayImageWithPOICrosses(vehicleOneData);
 
-    figure('Name', vehicleTwoData{1});
+    figure('Name', string(vehicleTwoData{1}));
     % Display Saturation images
     subplot(1,4,1)
     imshow(vehicleTwoData{8});

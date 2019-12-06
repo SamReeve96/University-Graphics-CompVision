@@ -48,6 +48,6 @@ function testResultsTable = testAllSituations(vehicleData)
     end
     
     % Convert testResults cell array to table with headings
-    testResultsTable = cell2table(testResults, 'VariableNames',{'testFileOne', 'testFileTwo', 'Are vehicles the same colour', 'is vehicle red', 'Average vehicle width/length ratio', 'firetruck Check Result' , 'Average vehicle width', 'width Check Result', 'vehicle Speed', 'speedCheckResult', 'reportedResult'});
+    testResultsTable = cell2table(testResults, 'VariableNames',{'testFileOne', 'testFileTwo', 'AreVehiclesTheSameColour', 'isVehicleRed', 'AverageVehicleWidthLengthRatio', 'firetruckCheckResult' , 'AverageVehicleWidth', 'widthCheckResult', 'vehicleSpeed', 'speedCheckResult', 'reportedResult'});
             
 end
